@@ -26,7 +26,9 @@ LinkedList* LinkedList_Allocate(void) {
   Verify333(ll != NULL);
 
   // STEP 1: initialize the newly allocated record structure.
-
+  ll->num_elements = 0;
+  ll->head = NULL;
+  ll->tail = NULL;
   // Return our newly minted linked list.
   return ll;
 }
@@ -39,7 +41,15 @@ void LinkedList_Free(LinkedList *list,
   // STEP 2: sweep through the list and free all of the nodes' payloads
   // (using the payload_free_function supplied as an argument) and
   // the nodes themselves.
-
+  // Create a temp linklist node to hold onto next and current node
+  LinkedListNode* temp = (list->head);
+  LinkedListNode* hold;
+  for(int i = 0; i < list->num_elements; i++) {
+    (*payload_free_function)(temp->payload); // Free's the payload first
+    hold = temp;
+    temp = temp->next;
+    free(hold); // Frees space in heap used for node
+  }
   // free the LinkedList
   free(list);
 }
@@ -66,15 +76,22 @@ void LinkedList_Push(LinkedList *list, LLPayload_t payload) {
     ln->next = ln->prev = NULL;
     list->head = list->tail = ln;
     list->num_elements = 1;
-  } else {
+  } else { 
     // STEP 3: typical case; list has >=1 elements
+    // Adds to head of list
+    LinkedListNode* temp = list->head;
+    list->head->prev = ln;
+    list->head = ln; // Sets head to new node
+    ln->next = temp; 
+    ln->prev = NULL; // Makes sure prev is set to Null 
+    list->num_elements = list->num_elements + 1; // Increament count of elements
   }
 }
 
 bool LinkedList_Pop(LinkedList *list, LLPayload_t *payload_ptr) {
   Verify333(payload_ptr != NULL);
   Verify333(list != NULL);
-
+  
   // STEP 4: implement LinkedList_Pop.  Make sure you test for
   // and empty list and fail.  If the list is non-empty, there
   // are two cases to consider: (a) a list with a single element in it
@@ -82,6 +99,26 @@ bool LinkedList_Pop(LinkedList *list, LLPayload_t *payload_ptr) {
   // Be sure to call free() to deallocate the memory that was
   // previously allocated by LinkedList_Push().
 
+  // Handles case when we are provided an empty list
+  if(list->num_elements == 0) {
+    return false;
+  } 
+  if(list->num_elements == 1) { // When there is 1 element
+    LinkedListNode* temp = list->head;
+    *payload_ptr = temp->payload; // Return pointer to paylod
+    free(temp);
+    list->head = NULL; // Sets head to NULL to indicate no elements
+    list->tail = NULL;
+    list->num_elements = 0; //To indicate there are no more elements in this list
+  } else { // Case where there are >= 2 elements
+    LinkedListNode* temp = list->head;
+    *payload_ptr = temp->payload;
+    list->head = (list->head)->next; // Sets the head to the next element in the list
+    list->head->prev = NULL;
+    // We now free the node
+    free(temp);
+    list->num_elements = list->num_elements - 1; // Decrement number of elements in list
+  }
   return true;  // you may need to change this return value
 }
 
@@ -91,6 +128,18 @@ void LinkedList_Append(LinkedList *list, LLPayload_t payload) {
   // STEP 5: implement LinkedList_Append.  It's kind of like
   // LinkedList_Push, but obviously you need to add to the end
   // instead of the beginning.
+  Verify333(list != NULL);
+
+  // Allocate space for the new node.
+  LinkedListNode *ln = (LinkedListNode *) malloc(sizeof(LinkedListNode));
+  Verify333(ln != NULL);
+  // Sets payload
+  ln->payload = payload;
+  // We add in the new node, while also correcting it's next and prev pointers
+  ln->prev = list->tail->prev;
+  list->tail = ln; // Updates the tail
+  ln->next = NULL;
+  list->num_elements = list->num_elements + 1; // Increment # of elements
 }
 
 void LinkedList_Sort(LinkedList *list, bool ascending,
@@ -166,7 +215,11 @@ bool LLIterator_Next(LLIterator *iter) {
   // you succeed, false otherwise
   // Note that if the iterator is already at the last node,
   // you should move the iterator past the end of the list
-
+  if(iter->node->next == NULL) { // Indicates we are at the last element
+    iter->node = NULL; // Moves past end of the list
+    return false;
+  } 
+  iter->node = iter->node->next;
   return true;  // you may need to change this return value
 }
 
@@ -196,9 +249,35 @@ bool LLIterator_Remove(LLIterator *iter,
   // Be sure to call the payload_free_function to free the payload
   // the iterator is pointing to, and also free any LinkedList
   // data structure element as appropriate.
-
-
-  return true;  // you may need to change this return value
+  bool output = true;
+  if(iter->list->num_elements == 1 || iter->node->next == NULL ) { // Handles first case and the tail case
+    LLPayload_t* payload_ptr = NULL;
+    LLSlice(iter->list, payload_ptr);
+    (*payload_free_function)(*payload_ptr);
+    if(iter->list->num_elements == 1) {
+      output = false;
+    }
+  }
+  // Case where it points at head
+  else if(iter->node->prev == NULL) {
+    (*payload_free_function)(iter->node->payload);
+    LinkedListNode* temp = (iter->node);
+    iter->node = iter->node->next;
+    free(temp);
+    iter->list->num_elements = iter->list->num_elements - 1;
+    iter->node->prev = NULL;
+  }
+  // General case 
+  else {
+    (*payload_free_function)(iter->node->payload);
+    LinkedListNode* temp = (iter->node);
+    // Splice out the node
+    iter->node->prev->next = iter->node->next;
+    iter->node->next->prev = iter->node->prev;
+    free(temp);
+    iter->list->num_elements = iter->list->num_elements - 1;
+  }
+  return output;  // you may need to change this return value
 }
 
 
@@ -210,7 +289,21 @@ bool LLSlice(LinkedList *list, LLPayload_t *payload_ptr) {
   Verify333(list != NULL);
 
   // STEP 8: implement LLSlice.
-
+  if(list->num_elements == 0) { // Confirms we have elements
+    return false;
+  }
+  list->num_elements -= 1;
+  *payload_ptr = list->tail->payload;
+  LinkedListNode* temp = list->tail; 
+  // Handles the case when we have 1 element
+  if(list->num_elements == 1) {
+    list->head = NULL;
+    list->tail = NULL;
+  } else { // Handles case when we have 2 or more elements
+    list->tail = list->tail->prev;
+    list->tail->next = NULL;
+  }
+  free(temp);
   return true;  // you may need to change this return value
 }
 
