@@ -42,7 +42,7 @@ void LinkedList_Free(LinkedList *list,
   // (using the payload_free_function supplied as an argument) and
   // the nodes themselves.
   // Create a temp linklist node to hold onto next and current node
-  LinkedListNode* temp = (list->head);
+  LinkedListNode* temp = list->head;
   LinkedListNode* hold;
   for(int i = 0; i < list->num_elements; i++) {
     (*payload_free_function)(temp->payload); // Free's the payload first
@@ -78,13 +78,13 @@ void LinkedList_Push(LinkedList *list, LLPayload_t payload) {
     list->num_elements = 1;
   } else { 
     // STEP 3: typical case; list has >=1 elements
-    // Adds to head of list
+   // Adds to head of list
     LinkedListNode* temp = list->head;
     list->head->prev = ln;
     list->head = ln; // Sets head to new node
     ln->next = temp; 
     ln->prev = NULL; // Makes sure prev is set to Null 
-    list->num_elements = list->num_elements + 1; // Increament count of elements
+    list->num_elements += 1; // Increament count of elements
   }
 }
 
@@ -99,26 +99,23 @@ bool LinkedList_Pop(LinkedList *list, LLPayload_t *payload_ptr) {
   // Be sure to call free() to deallocate the memory that was
   // previously allocated by LinkedList_Push().
 
-  // Handles case when we are provided an empty list
+ // Handles case when we are provided an empty list
   if(list->num_elements == 0) {
     return false;
   } 
+  LinkedListNode* temp = list->head;
+  *payload_ptr = temp->payload; // Return pointer to paylod
   if(list->num_elements == 1) { // When there is 1 element
-    LinkedListNode* temp = list->head;
-    *payload_ptr = temp->payload; // Return pointer to paylod
-    free(temp);
     list->head = NULL; // Sets head to NULL to indicate no elements
     list->tail = NULL;
-    list->num_elements = 0; //To indicate there are no more elements in this list
   } else { // Case where there are >= 2 elements
-    LinkedListNode* temp = list->head;
-    *payload_ptr = temp->payload;
     list->head = (list->head)->next; // Sets the head to the next element in the list
     list->head->prev = NULL;
-    // We now free the node
-    free(temp);
-    list->num_elements = list->num_elements - 1; // Decrement number of elements in list
+
   }
+  list->num_elements -= 1; // Decrement number of elements in list
+  // We now free the node
+  free(temp);
   return true;  // you may need to change this return value
 }
 
@@ -135,11 +132,18 @@ void LinkedList_Append(LinkedList *list, LLPayload_t payload) {
   Verify333(ln != NULL);
   // Sets payload
   ln->payload = payload;
-  // We add in the new node, while also correcting it's next and prev pointers
-  ln->prev = list->tail->prev;
-  list->tail = ln; // Updates the tail
   ln->next = NULL;
-  list->num_elements = list->num_elements + 1; // Increment # of elements
+  if(list->num_elements == 0) { // When there are no elements in list
+    list->head = ln;
+    list->tail = ln;
+    ln->prev = NULL;
+  } else { // When there is >= 1 node
+    list->tail->next = ln;
+    ln->prev = list->tail;
+    list->tail = ln;
+  }
+  Verify333(list != NULL);
+  list->num_elements += 1;
 }
 
 void LinkedList_Sort(LinkedList *list, bool ascending,
@@ -250,13 +254,19 @@ bool LLIterator_Remove(LLIterator *iter,
   // the iterator is pointing to, and also free any LinkedList
   // data structure element as appropriate.
   bool output = true;
-  if(iter->list->num_elements == 1 || iter->node->next == NULL ) { // Handles first case and the tail case
+  if(iter->list->num_elements == 1) { // Handles first case 
     LLPayload_t* payload_ptr = NULL;
     LLSlice(iter->list, payload_ptr);
+    Verify333(payload_ptr != NULL);
     (*payload_free_function)(*payload_ptr);
-    if(iter->list->num_elements == 1) {
-      output = false;
-    }
+    return false;
+  }
+  else if(iter->node->next == NULL) { // Handles tail case
+    LLPayload_t* payload_ptr = NULL;
+    LLSlice(iter->list, payload_ptr);
+    Verify333(payload_ptr != NULL);
+    (*payload_free_function)(*payload_ptr);
+    iter->node = iter->list->tail;
   }
   // Case where it points at head
   else if(iter->node->prev == NULL) {
@@ -264,7 +274,7 @@ bool LLIterator_Remove(LLIterator *iter,
     LinkedListNode* temp = (iter->node);
     iter->node = iter->node->next;
     free(temp);
-    iter->list->num_elements = iter->list->num_elements - 1;
+    iter->list->num_elements -= 1;
     iter->node->prev = NULL;
   }
   // General case 
@@ -274,8 +284,9 @@ bool LLIterator_Remove(LLIterator *iter,
     // Splice out the node
     iter->node->prev->next = iter->node->next;
     iter->node->next->prev = iter->node->prev;
+    iter->node = iter->node->next;
     free(temp);
-    iter->list->num_elements = iter->list->num_elements - 1;
+    iter->list->num_elements -= 1;
   }
   return output;  // you may need to change this return value
 }
@@ -292,7 +303,6 @@ bool LLSlice(LinkedList *list, LLPayload_t *payload_ptr) {
   if(list->num_elements == 0) { // Confirms we have elements
     return false;
   }
-  list->num_elements -= 1;
   *payload_ptr = list->tail->payload;
   LinkedListNode* temp = list->tail; 
   // Handles the case when we have 1 element
@@ -304,6 +314,7 @@ bool LLSlice(LinkedList *list, LLPayload_t *payload_ptr) {
     list->tail->next = NULL;
   }
   free(temp);
+  list->num_elements -= 1;
   return true;  // you may need to change this return value
 }
 
