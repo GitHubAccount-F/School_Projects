@@ -219,12 +219,12 @@ bool LLIterator_Next(LLIterator *iter) {
   // you succeed, false otherwise
   // Note that if the iterator is already at the last node,
   // you should move the iterator past the end of the list
+  bool output = true;
   if(iter->node->next == NULL) { // Indicates we are at the last element
-    iter->node = NULL; // Moves past end of the list
-    return false;
+    output =  false;
   } 
   iter->node = iter->node->next;
-  return true;  // you may need to change this return value
+  return output;  // you may need to change this return value
 }
 
 void LLIterator_Get(LLIterator *iter, LLPayload_t *payload) {
@@ -253,41 +253,33 @@ bool LLIterator_Remove(LLIterator *iter,
   // Be sure to call the payload_free_function to free the payload
   // the iterator is pointing to, and also free any LinkedList
   // data structure element as appropriate.
+ 
   bool output = true;
-  if(iter->list->num_elements == 1) { // Handles first case 
-    LLPayload_t* payload_ptr = NULL;
-    LLSlice(iter->list, payload_ptr);
-    Verify333(payload_ptr != NULL);
-    (*payload_free_function)(*payload_ptr);
-    return false;
-  }
-  else if(iter->node->next == NULL) { // Handles tail case
-    LLPayload_t* payload_ptr = NULL;
-    LLSlice(iter->list, payload_ptr);
-    Verify333(payload_ptr != NULL);
-    (*payload_free_function)(*payload_ptr);
-    iter->node = iter->list->tail;
-  }
-  // Case where it points at head
-  else if(iter->node->prev == NULL) {
-    (*payload_free_function)(iter->node->payload);
-    LinkedListNode* temp = (iter->node);
-    iter->node = iter->node->next;
-    free(temp);
-    iter->list->num_elements -= 1;
-    iter->node->prev = NULL;
-  }
-  // General case 
-  else {
-    (*payload_free_function)(iter->node->payload);
-    LinkedListNode* temp = (iter->node);
-    // Splice out the node
-    iter->node->prev->next = iter->node->next;
-    iter->node->next->prev = iter->node->prev;
-    iter->node = iter->node->next;
-    free(temp);
-    iter->list->num_elements -= 1;
-  }
+  // Release payload
+ (*payload_free_function)(iter->node->payload);
+  LinkedListNode* temp = (iter->node);
+ if(iter->list->num_elements == 1) {
+  iter->list->head = NULL;
+  iter->list->tail = NULL;
+  iter->node = NULL;
+  output = false;
+ }
+ else if(iter->node->next == NULL) { // Handles tail case
+  iter->list->tail = iter->list->tail->prev;
+  iter->list->tail->next = NULL;
+  iter->node = iter->list->tail;
+ } else if(iter->node->prev == NULL) { // Handles head case
+  iter->node = iter->node->next;
+  iter->list->head = iter->list->head->next;
+  iter->node->prev = NULL;
+ } else { // General case
+  // Splice out the node
+  iter->node->prev->next = iter->node->next;
+  iter->node->next->prev = iter->node->prev;
+  iter->node = iter->node->next;
+ }
+  free(temp);
+  iter->list->num_elements -= 1;
   return output;  // you may need to change this return value
 }
 
