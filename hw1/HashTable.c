@@ -137,9 +137,77 @@ bool HashTable_Insert(HashTable *table,
   // and optionally remove a key within a chain, rather than putting
   // all that logic inside here.  You might also find that your helper
   // can be reused in steps 2 and 3.
-
-  return 0;  // you may need to change this return value
+  bool output = true;
+  void* ptr = malloc(sizeof(HTKeyValue_t));
+  if(chain == NULL) { // List doesn't exist in bucket
+    chain = LinkedList_Allocate();
+    LinkedList_Push(chain, (LLPayload_t)ptr);
+    output = false;
+  } else { // There must be at least one element in side the list
+    LLIterator* itr = findSameKey(chain, newkeyvalue.key, oldkeyvalue);
+    if(itr == NULL) { // That means it was not in the list
+      LinkedList_Push(chain, (LLPayload_t)&newkeyvalue);
+      output = false;
+    } else { // A similar key was found in the list
+      LLIterator_Get(itr, (LLPayload_t)oldkeyvalue); // Sends back the old key value
+      LLIterator_Remove(itr, ExamplePayload_Free); // Removed old key value
+      LinkedList_Push(chain, (LLPayload_t)ptr); // Inserted new (key, value) at front of list
+    }
+  LLIterator_Free(itr); // Free iterator
+  }
+  return output;  // you may need to change this return value
 }
+
+
+
+
+
+
+//  Arguments: list - a LinkedList
+//              newkeyvalue - (key,pair) we are inserting in list
+//              oldkeyvalue - output pointer to use if we want to return a payload
+
+// Given a list, it searches through it to find a similar payload to newkeyvalue. 
+// Output: 
+// If a similar payload is found, oldkeyvalue will contain the old payload value.
+// Otherwise, oldkeyvalue will contained an undefined value.
+// Also, an iterator at the position the old key value was found would be returned. If 
+// there was no same key, then the iter would be null;
+LLIterator* findSameKey(LinkedList* list,
+                      HTKey_t key,
+                      HTKeyValue_t *oldkeyvalue) {
+  // Create an iterator
+  LLIterator* itr = LLIterator_Allocate(list);
+  //HTKeyValue_t* temp = oldkeyvalue; // Store value contained in oldkeyvalue
+  while(LLIterator_Next(itr)) {
+    LLIterator_Get(itr,(LLPayload_t)oldkeyvalue);
+    if(oldkeyvalue->key == key) {
+      return itr;
+    }
+  }
+  //oldkeyvalue = temp; // Restore value
+  return NULL; 
+}
+
+// Input: A payload to free
+// OUtput: Free's the payload off the heap
+void ExamplePayload_Free(HTKeyValue_t* payload) {
+  Verify333(payload != NULL);
+  free(payload);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 bool HashTable_Find(HashTable *table,
                     HTKey_t key,
@@ -147,8 +215,19 @@ bool HashTable_Find(HashTable *table,
   Verify333(table != NULL);
 
   // STEP 2: implement HashTable_Find.
+  int bucket;
+  LinkedList *chain;
 
-  return false;  // you may need to change this return value
+
+  // Calculate which bucket and chain we're inserting into.
+  bucket = HashKeyToBucketNum(table, key);
+  chain = table->buckets[bucket];
+  LLIterator* itr = findSameKey(chain,key, keyvalue);
+  if(itr == NULL) {
+    return false;
+  }
+  LLIterator_Get(itr, keyvalue);
+  return true;  // you may need to change this return value
 }
 
 bool HashTable_Remove(HashTable *table,
@@ -157,8 +236,20 @@ bool HashTable_Remove(HashTable *table,
   Verify333(table != NULL);
 
   // STEP 3: implement HashTable_Remove.
+  int bucket;
+  LinkedList *chain;
 
-  return 0;  // you may need to change this return value
+
+  // Calculate which bucket and chain we're inserting into.
+  bucket = HashKeyToBucketNum(table, key);
+  chain = table->buckets[bucket];
+  LLIterator* itr = findSameKey(chain,key, keyvalue);
+  if(itr == NULL) {
+    return false;
+  }
+  LLIterator_Get(itr, keyvalue);
+  LLIterator_Remove(itr, ExamplePayload_Free);
+  return true;  
 }
 
 
