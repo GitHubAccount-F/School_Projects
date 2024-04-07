@@ -301,24 +301,39 @@ bool HTIterator_IsValid(HTIterator *iter) {
   Verify333(iter != NULL);
 
   // STEP 4: implement HTIterator_IsValid.
-
-  return true;  // you may need to change this return value
+  return (iter->bucket_it != NULL);
 }
 
 bool HTIterator_Next(HTIterator *iter) {
   Verify333(iter != NULL);
 
   // STEP 5: implement HTIterator_Next.
-
-  return true;  // you may need to change this return value
+  bool output = true;
+  if(LLIterator_IsValid(iter->bucket_idx) && LLIterator_Next(iter->bucket_idx)) {
+    // Nothing happens as the iterator moves on to the next element
+  } else {
+    // Cases: We are at end of table or end of a bucket
+    if(iter->ht->num_buckets != iter->bucket_idx + 1) { // When we are at end of bucket
+      // Sets iterator to beginning of the next bucket
+      free(iter->bucket_it); // Free current iterator
+      iter->bucket_it = LLIterator_Allocate(iter->ht->buckets[iter->bucket_idx + 1]);
+    } else { // We must be at the end of the table
+      free(iter->bucket_it); // Free current iterator
+      iter->bucket_it = NULL;
+      output = false;
+    }
+  }
+  return output;  // you may need to change this return value
 }
 
 bool HTIterator_Get(HTIterator *iter, HTKeyValue_t *keyvalue) {
   Verify333(iter != NULL);
-
   // STEP 6: implement HTIterator_Get.
-
-  return true;  // you may need to change this return value
+  if(iter == NULL || iter->ht->num_elements == 0) {
+    return false;
+  }
+  LLIterator_Get(iter->bucket_it, keyvalue);
+  return true; 
 }
 
 bool HTIterator_Remove(HTIterator *iter, HTKeyValue_t *keyvalue) {
