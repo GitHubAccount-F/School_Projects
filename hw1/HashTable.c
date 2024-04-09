@@ -118,6 +118,49 @@ int HashTable_NumElements(HashTable *table) {
   return table->num_elements;
 }
 
+
+//////// Private Methods Start///////////
+
+//  Arguments: list - a LinkedList
+//              newkeyvalue - (key,pair) we are inserting in list
+
+// Given a list, it searches through it to find a similar payload to newkeyvalue. 
+// Output: 
+// If a similar payload is found, we will return an iterator to that exact node. 
+// Otherwise, we will return NULL.
+LLIterator* findSameKey(LinkedList* list,
+                      HTKey_t key) {
+  // Create an iterator
+  LLIterator *itr = LLIterator_Allocate(list);
+  HTKeyValue_t *store = NULL; // Create a temporary pointer
+  while(LLIterator_IsValid(itr)) {
+    LLIterator_Get(itr,(LLPayload_t*) &store);
+    if(store->key == key) {
+      return itr;
+    }
+    LLIterator_Next(itr);
+  }
+  LLIterator_Free(itr); // Won't be used as we will return NULL
+  return NULL; 
+}
+
+// Input: A payload to free. Value should be a pointer. 
+// Output: Free's payload from the heap.  
+void ExamplePayload_Free(LLPayload_t payload) {
+  free(payload);
+}
+
+
+
+
+/////// Private Methods End  ///////
+
+
+
+
+
+
+
 bool HashTable_Insert(HashTable *table,
                       HTKeyValue_t newkeyvalue,
                       HTKeyValue_t *oldkeyvalue) {
@@ -126,7 +169,6 @@ bool HashTable_Insert(HashTable *table,
 
   Verify333(table != NULL);
   MaybeResize(table);
-
   // Calculate which bucket and chain we're inserting into.
   bucket = HashKeyToBucketNum(table, newkeyvalue.key);
   chain = table->buckets[bucket];
@@ -137,72 +179,27 @@ bool HashTable_Insert(HashTable *table,
   // and optionally remove a key within a chain, rather than putting
   // all that logic inside here.  You might also find that your helper
   // can be reused in steps 2 and 3.
-  bool output = true;
-  void* ptr = malloc(sizeof(HTKeyValue_t));
-  if(chain == NULL) { // List doesn't exist in bucket
-    chain = LinkedList_Allocate();
-    LinkedList_Push(chain, (LLPayload_t)ptr);
-    output = false;
-  } else { // There must be at least one element in side the list
-    LLIterator* itr = findSameKey(chain, newkeyvalue.key, oldkeyvalue);
-    if(itr == NULL) { // That means it was not in the list
-      LinkedList_Push(chain, (LLPayload_t)&newkeyvalue);
-      output = false;
-    } else { // A similar key was found in the list
-      LLIterator_Get(itr, (LLPayload_t)oldkeyvalue); // Sends back the old key value
-      LLIterator_Remove(itr, ExamplePayload_Free); // Removed old key value
-      LinkedList_Push(chain, (LLPayload_t)ptr); // Inserted new (key, value) at front of list
-    }
-  LLIterator_Free(itr); // Free iterator
+  LLIterator *itr = findSameKey(chain, newkeyvalue.key); // Test
+  if(itr == NULL) { // That means it was not in the list
+    HTKeyValue_t *ptr = (HTKeyValue_t*)malloc(sizeof(HTKeyValue_t));
+    //printf("key = %li \n", (long)newkeyvalue.key);
+    ptr->key = newkeyvalue.key;
+    ptr->value = newkeyvalue.value;
+    LinkedList_Push(chain, (LLPayload_t) ptr); // Test
+    table->num_elements += 1; // Update number of elements in list
+    return false;
+  } else { // A similar key was found in the list
+    //printf("else\n");
+    HTKeyValue_t* store = NULL;
+    LLIterator_Get(itr, (LLPayload_t*) &store); // Sends back the old (key, value)
+    Verify333(store->key == newkeyvalue.key);
+    oldkeyvalue->value = store->value;
+    oldkeyvalue->key = store->key;
+    store->value = newkeyvalue.value;
+    LLIterator_Free(itr); // Free iterator 
   }
-  return output;  // you may need to change this return value
+  return true;  // you may need to change this return value
 }
-
-
-
-
-
-
-//  Arguments: list - a LinkedList
-//              newkeyvalue - (key,pair) we are inserting in list
-//              oldkeyvalue - output pointer to use if we want to return a payload
-
-// Given a list, it searches through it to find a similar payload to newkeyvalue. 
-// Output: 
-// If a similar payload is found, oldkeyvalue will contain the old payload value.
-// Otherwise, oldkeyvalue will contained an undefined value.
-// Also, an iterator at the position the old key value was found would be returned. If 
-// there was no same key, then the iter would be null;
-LLIterator* findSameKey(LinkedList* list,
-                      HTKey_t key,
-                      HTKeyValue_t *oldkeyvalue) {
-  // Create an iterator
-  LLIterator* itr = LLIterator_Allocate(list);
-  //HTKeyValue_t* temp = oldkeyvalue; // Store value contained in oldkeyvalue
-  while(LLIterator_Next(itr)) {
-    LLIterator_Get(itr,(LLPayload_t)oldkeyvalue);
-    if(oldkeyvalue->key == key) {
-      return itr;
-    }
-  }
-  //oldkeyvalue = temp; // Restore value
-  return NULL; 
-}
-
-// Input: A payload to free
-// OUtput: Free's the payload off the heap
-void ExamplePayload_Free(HTKeyValue_t* payload) {
-  Verify333(payload != NULL);
-  free(payload);
-}
-
-
-
-
-
-
-
-
 
 
 
@@ -222,11 +219,16 @@ bool HashTable_Find(HashTable *table,
   // Calculate which bucket and chain we're inserting into.
   bucket = HashKeyToBucketNum(table, key);
   chain = table->buckets[bucket];
-  LLIterator* itr = findSameKey(chain,key, keyvalue);
+  LLIterator *itr = findSameKey(chain,key);
   if(itr == NULL) {
     return false;
   }
-  LLIterator_Get(itr, keyvalue);
+  HTKeyValue_t* store = NULL;
+  LLIterator_Get(itr, (LLPayload_t*) &store); // Sends back the old (key, value)
+  Verify333(store->key == key);
+  keyvalue->value = store->value;
+  keyvalue->key = store->key;
+  LLIterator_Free(itr); // Free iterator 
   return true;  // you may need to change this return value
 }
 
@@ -243,12 +245,18 @@ bool HashTable_Remove(HashTable *table,
   // Calculate which bucket and chain we're inserting into.
   bucket = HashKeyToBucketNum(table, key);
   chain = table->buckets[bucket];
-  LLIterator* itr = findSameKey(chain,key, keyvalue);
+  LLIterator *itr = findSameKey(chain,key);
   if(itr == NULL) {
     return false;
   }
-  LLIterator_Get(itr, keyvalue);
-  LLIterator_Remove(itr, ExamplePayload_Free);
+  HTKeyValue_t* store = NULL;
+  LLIterator_Get(itr, (LLPayload_t*) &store); // Sends back the old (key, value)
+  Verify333(store->key == key);
+  keyvalue->value = store->value;
+  keyvalue->key = store->key;
+  LLIterator_Remove(itr, &ExamplePayload_Free);
+  LLIterator_Free(itr); // Free iterator 
+  table->num_elements -= 1; // Update number of elements in table
   return true;  
 }
 
@@ -301,38 +309,52 @@ bool HTIterator_IsValid(HTIterator *iter) {
   Verify333(iter != NULL);
 
   // STEP 4: implement HTIterator_IsValid.
-  return (iter->bucket_it != NULL);
+  return (iter->bucket_it != NULL && LLIterator_IsValid(iter->bucket_it));
 }
 
 bool HTIterator_Next(HTIterator *iter) {
   Verify333(iter != NULL);
 
   // STEP 5: implement HTIterator_Next.
-  bool output = true;
-  if(LLIterator_IsValid(iter->bucket_idx) && LLIterator_Next(iter->bucket_idx)) {
+  if(LLIterator_IsValid(iter->bucket_it) && LLIterator_Next(iter->bucket_it)) {
     // Nothing happens as the iterator moves on to the next element
-  } else {
-    // Cases: We are at end of table or end of a bucket
-    if(iter->ht->num_buckets != iter->bucket_idx + 1) { // When we are at end of bucket
-      // Sets iterator to beginning of the next bucket
-      free(iter->bucket_it); // Free current iterator
-      iter->bucket_it = LLIterator_Allocate(iter->ht->buckets[iter->bucket_idx + 1]);
-    } else { // We must be at the end of the table
-      free(iter->bucket_it); // Free current iterator
-      iter->bucket_it = NULL;
-      output = false;
-    }
+    return true;
   }
-  return output;  // you may need to change this return value
+  // Moving to next element is not valid
+  if(iter->bucket_idx + 1 == iter->ht->num_buckets) {  
+    LLIterator_Free(iter->bucket_it); // Free iterator
+    iter->bucket_it = NULL; // Set iter value to null as we have no use for itr
+    return false;
+  } else { // Must be at the end of some bucket
+    int index = 1; 
+    // Keep going through buckets until we find a valid iterator
+    while(!LLIterator_IsValid(iter->bucket_it) && (iter->bucket_idx + index) < iter->ht->num_buckets) {
+      LLIterator_Free(iter->bucket_it);
+      iter->bucket_it = LLIterator_Allocate(iter->ht->buckets[iter->bucket_idx + index]);
+      iter->bucket_idx++;
+      index++;
+    }
+    // If the iterator we end up with is invalid, we must've reached the end of the table
+    if(!LLIterator_IsValid(iter->bucket_it)) {
+      LLIterator_Free(iter->bucket_it);
+      iter->bucket_it = NULL;
+      return false;
+    } 
+    return true; // No errors after switching iterator
+  }
 }
+
 
 bool HTIterator_Get(HTIterator *iter, HTKeyValue_t *keyvalue) {
   Verify333(iter != NULL);
   // STEP 6: implement HTIterator_Get.
-  if(iter == NULL || iter->ht->num_elements == 0) {
+  if(!HTIterator_IsValid(iter) || iter->ht->num_elements == 0) {
     return false;
   }
-  LLIterator_Get(iter->bucket_it, keyvalue);
+  HTKeyValue_t* store = NULL;
+  LLIterator_Get(iter->bucket_it, (LLPayload_t*) &store); // Sends back the old (key, value)
+  keyvalue->value = store->value;
+  keyvalue->key = store->key;
   return true; 
 }
 
