@@ -316,32 +316,31 @@ bool HTIterator_Next(HTIterator *iter) {
   Verify333(iter != NULL);
 
   // STEP 5: implement HTIterator_Next.
-  if(LLIterator_IsValid(iter->bucket_it) && LLIterator_Next(iter->bucket_it)) {
-    // Nothing happens as the iterator moves on to the next element
-    return true;
+  if(iter->bucket_it == NULL || !LLIterator_IsValid(iter->bucket_it)) {
+      return false; // Must be at end of table for there to be no iterators stored
   }
-  // Moving to next element is not valid
-  if(iter->bucket_idx + 1 == iter->ht->num_buckets) {  
-    LLIterator_Free(iter->bucket_it); // Free iterator
-    iter->bucket_it = NULL; // Set iter value to null as we have no use for itr
-    return false;
-  } else { // Must be at the end of some bucket
-    int index = 1; 
-    // Keep going through buckets until we find a valid iterator
-    while(!LLIterator_IsValid(iter->bucket_it) && (iter->bucket_idx + index) < iter->ht->num_buckets) {
-      LLIterator_Free(iter->bucket_it);
-      iter->bucket_it = LLIterator_Allocate(iter->ht->buckets[iter->bucket_idx + index]);
-      iter->bucket_idx++;
-      index++;
+  if(!LLIterator_Next(iter->bucket_it)) {
+    // We are at end of bucket, so check the next bucket for elements 
+    if(iter->bucket_it != NULL) { 
+        LLIterator_Free(iter->bucket_it);
     }
-    // If the iterator we end up with is invalid, we must've reached the end of the table
-    if(!LLIterator_IsValid(iter->bucket_it)) {
-      LLIterator_Free(iter->bucket_it);
-      iter->bucket_it = NULL;
-      return false;
+    int constIndex = iter->bucket_idx + 1; 
+    int i;
+    // Keep going through buckets until we find a valid iterator
+    for (i = constIndex; i < iter->ht->num_buckets; i++) { // We start at next bucket
+      if (LinkedList_NumElements(iter->ht->buckets[i]) > 0) {
+        iter->bucket_idx = i;
+        iter->bucket_it = LLIterator_Allocate(iter->ht->buckets[i]);
+        return true;
+      }
     } 
-    return true; // No errors after switching iterator
+    // No elements detected in other buckets
+    iter->bucket_it = NULL;
+    iter->bucket_idx = i - 1;
+    return false;
   }
+  // There was a next element in bucket, so we are safe
+  return true;
 }
 
 
@@ -357,6 +356,8 @@ bool HTIterator_Get(HTIterator *iter, HTKeyValue_t *keyvalue) {
   keyvalue->key = store->key;
   return true; 
 }
+
+
 
 bool HTIterator_Remove(HTIterator *iter, HTKeyValue_t *keyvalue) {
   HTKeyValue_t kv;
@@ -418,3 +419,72 @@ static void MaybeResize(HashTable *ht) {
   HTIterator_Free(it);
   HashTable_Free(newht, &HTNoOpFree);
 }
+
+
+
+/*
+if(!LLIterator_IsValid(iter->bucket_it)) {
+    // Return false as we must be at end of table
+    return false;
+}
+if(!LLIterator_Next(iter->bucket_it)) {
+  // We are at end of bucket, so check the next bucket for elements 
+  int constIndex = iter->bucket_idx; 
+  // Keep going through buckets until we find a valid iterator
+  for(int i = 1; (constIndex + i) < iter->ht->num_buckets; i++) {
+    if(iter->bucket_it != NULL) {
+      LLIterator_Free(iter->bucket_it);
+    }
+    iter->bucket_idx += 1; // Move to next bucket
+    if(iter->ht->buckets[iter->bucket_idx + i] == NULL) {
+      continue;
+    }
+    iter->bucket_it = LLIterator_Allocate(iter->ht->buckets[constIndex + i]);
+    if(LLIterator_IsValid(iter->bucket_it)) {
+      return true;
+    }
+  }
+  if(iter->bucket_it == NULL) {
+    return false;
+  }
+  if(!LLIterator_IsValid(iter->bucket_it)) {
+    free(iter->bucket_it);
+    return false;
+  }
+} else {
+  // There was a next element in bucket, so we are safe
+  return true;
+}
+
+
+
+
+  // Error: Either at end of bucket or at end of table
+  if(iter->bucket_idx + 1 == iter->ht->num_buckets) {   // We are in last bucket, meaning end of table
+    LLIterator_Free(iter->bucket_it); // Free iterator
+    iter->bucket_it = NULL; // Set iter value to null as we have no use for itr
+    return false;
+  } else { // Must be at the end of one bucket in the table
+    int constIndex = iter->bucket_idx; 
+    // Keep going through buckets until we find a valid iterator
+    for(int i = 1; (constIndex + i) < iter->ht->num_buckets; i++) {
+      LLIterator_Free(iter->bucket_it);
+      iter->bucket_idx += 1; // Move to next bucket
+      if(iter->ht->buckets[iter->bucket_idx + i] == NULL) {
+        continue;
+      }
+      iter->bucket_it = LLIterator_Allocate(iter->ht->buckets[iter->bucket_idx + i]);
+      if(LLIterator_IsValid(iter->bucket_it)) {
+        break;
+      }
+    }
+    // If the iterator we end up with is invalid, we must've reached the end of the table
+    if(!LLIterator_IsValid(iter->bucket_it)) {
+      Verify333(iter->bucket_it != NULL); 
+      LLIterator_Free(iter->bucket_it);
+      iter->bucket_it = NULL;
+      return false;
+    } 
+    return true; // No errors after switching iterator
+
+    */
