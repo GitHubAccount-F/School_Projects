@@ -111,7 +111,7 @@ bool LinkedList_Pop(LinkedList *list, LLPayload_t *payload_ptr) {
     list->head = list->head->next;
     list->head->prev = NULL;
   }
-  list->num_elements -= 1;  // Decrement number of elements in list
+  list->num_elements -= 1;  // decrease number of elements in list
   // We now free the node
   free(temp);
   return true;  // you may need to change this return value

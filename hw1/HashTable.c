@@ -258,7 +258,7 @@ bool HashTable_Remove(HashTable *table,
   CopyKeyValue(store, keyvalue);  // Copies value to return parameter
   LLIterator_Remove(itr, &PayloadFree);
   LLIterator_Free(itr);  // Free iterator
-  table->num_elements -= 1;  // Update number of elements in table
+  table->num_elements -= 1;  // Update # of elements in table
   return true;
 }
 
