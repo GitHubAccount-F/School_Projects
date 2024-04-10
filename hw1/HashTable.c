@@ -121,15 +121,15 @@ int HashTable_NumElements(HashTable *table) {
 
 //////// Private Methods Start///////////
 
-//  Arguments: list - a LinkedList
-//             key - key value we will use to check the list
-
+// Input:  list - a LinkedList
+//         key - A key we will use in the list.
+// Output:
 // Given a list, it searches through it to find a payload
 // that contains the given key.
 // Output:  If a  payload is found, we will return an
-// iterator to that exact list element. Otherwise, we
+// iterator at that exact list element. Otherwise, we
 // will return NULL.
-LLIterator* findSameKey(LinkedList* list, HTKey_t key) {
+static LLIterator* FindSameKey(LinkedList* list, HTKey_t key) {
   // Create an iterator
   LLIterator* itr = LLIterator_Allocate(list);
   HTKeyValue_t *store = NULL;  // Create a temporary pointer
@@ -141,46 +141,54 @@ LLIterator* findSameKey(LinkedList* list, HTKey_t key) {
     // Nothing found yet, check new element
     LLIterator_Next(itr);
   }
-  LLIterator_Free(itr);  // Won't be used since we will return NULL
+  // We found no matches, so we free the itr
+  // and return NULL:
+  LLIterator_Free(itr);
   return NULL;
 }
 
-// Input: A payload to free. Value should be a pointer.
+// Input: payload - A pointer to a payload contained in the Heap.
 // Output: Free's payload from the heap.
-void PayloadFree(LLPayload_t payload) {
+static void PayloadFree(LLPayload_t payload) {
   free(payload);
 }
 
 
-// Input: temp - A pointer of type HTKeyValue_t. This is the
-//               contains the values we will use to switch over.
+// Input: temp - A pointer of type HTKeyValue_t. This
+//               should be a payload.
 //        oldkeyvalue - A pointer of type HTKeyValue_t. This is the
-//                      return parameter.
-// Output: Using temp, we will copy in the payload to
-// the return parameter oldkeyvalue.
-void CopyKeyValue(HTKeyValue_t *temp, HTKeyValue_t *oldkeyvalue) {
+//                      output/return parameter.
+// Output: We will copy in the payload from the first parameter
+// to the second parameter.
+static void CopyKeyValue(HTKeyValue_t *temp, HTKeyValue_t *oldkeyvalue) {
   oldkeyvalue->value = temp->value;
   oldkeyvalue->key = temp->key;
 }
+
+// Input: table - pointer to a hashtable.
+//        key - value that we will use to hash and find its bucket
+//              inside the hashtable.
+// Output: Returns the bucket that "key" hashes to inside
+//         the hashtable. This corresponds to a linkedlist pointer.
+static LinkedList* FindBucket(HashTable *table, HTKey_t key) {
+  // Calculate which bucket and chain we're inserting into.
+  int bucket = bucket = HashKeyToBucketNum(table, key);
+  LinkedList *chain = chain = table->buckets[bucket];
+  return chain;
+}
 /////// Private Methods End  ///////
-
-
-
-
 
 
 
 bool HashTable_Insert(HashTable *table,
                       HTKeyValue_t newkeyvalue,
                       HTKeyValue_t *oldkeyvalue) {
-  int bucket;
   LinkedList *chain;
 
   Verify333(table != NULL);
   MaybeResize(table);
-  // Calculate which bucket and chain we're inserting into.
-  bucket = HashKeyToBucketNum(table, newkeyvalue.key);
-  chain = table->buckets[bucket];
+  // Finds bucket
+  chain = FindBucket(table, newkeyvalue.key);
 
   // STEP 1: finish the implementation of InsertHashTable.
   // This is a fairly complex task, so you might decide you want
@@ -188,29 +196,26 @@ bool HashTable_Insert(HashTable *table,
   // and optionally remove a key within a chain, rather than putting
   // all that logic inside here.  You might also find that your helper
   // can be reused in steps 2 and 3.
-  LLIterator *itr = findSameKey(chain, newkeyvalue.key);
-  if (itr == NULL) {  // That means it was not in the list
+  LLIterator *itr = FindSameKey(chain, newkeyvalue.key);
+  if (itr == NULL) {  // That means key was not in the list
     HTKeyValue_t *ptr = (HTKeyValue_t*)malloc(sizeof(HTKeyValue_t));
     ptr->key = newkeyvalue.key;
     ptr->value = newkeyvalue.value;
-    LinkedList_Push(chain, (LLPayload_t) ptr);
+    LinkedList_Push(chain, (LLPayload_t) ptr);  // Push onto bucket
     table->num_elements += 1;  // Update number of elements in list
     return false;
   } else {  // A similar key was found in the list
     HTKeyValue_t* store = NULL;
     // Sends back the old (key, value)
     LLIterator_Get(itr, (LLPayload_t*) &store);
-    Verify333(store->key == newkeyvalue.key);
-    // Copies value to return parameter
+    // Copies value to output parameter
     CopyKeyValue(store, oldkeyvalue);
+    // Updates node
     store->value = newkeyvalue.value;
-    LLIterator_Free(itr);  // Free iterator
+    LLIterator_Free(itr);  // Free's iterator
   }
   return true;
 }
-
-
-
 
 
 
@@ -220,24 +225,20 @@ bool HashTable_Find(HashTable *table,
   Verify333(table != NULL);
 
   // STEP 2: implement HashTable_Find.
-  int bucket;
-  LinkedList *chain;
-
-
-  // Calculate which bucket and chain we're inserting into.
-  bucket = HashKeyToBucketNum(table, key);
-  chain = table->buckets[bucket];
-  LLIterator *itr = findSameKey(chain, key);
-  if (itr == NULL) {
+  // Finds bucket
+  LinkedList *chain = FindBucket(table, key);
+  // Retrieves iterator
+  LLIterator *itr = FindSameKey(chain, key);
+  if (itr == NULL) {  // key not present in table
     return false;
   }
   HTKeyValue_t* store = NULL;
+  // Retrieves (key, value) from bucket
   LLIterator_Get(itr, (LLPayload_t*) &store);
-  Verify333(store->key == key);
   // Copies value to return parameter
   CopyKeyValue(store, keyvalue);
   LLIterator_Free(itr);  // Free iterator
-  return true;  // you may need to change this return value
+  return true;
 }
 
 bool HashTable_Remove(HashTable *table,
@@ -246,16 +247,15 @@ bool HashTable_Remove(HashTable *table,
   Verify333(table != NULL);
 
   // STEP 3: implement HashTable_Remove.
-  // Calculate which bucket and chain we're inserting into.
-  int bucket = bucket = HashKeyToBucketNum(table, key);
-  LinkedList *chain = chain = table->buckets[bucket];
-  LLIterator *itr = findSameKey(chain, key);
+  // Finds bucket
+  LinkedList *chain = FindBucket(table, key);
+  LLIterator *itr = FindSameKey(chain, key);
   if (itr == NULL) {
     return false;
   }
   HTKeyValue_t* store = NULL;
   LLIterator_Get(itr, (LLPayload_t*) &store);
-  CopyKeyValue(store, keyvalue); // Copies value to return parameter
+  CopyKeyValue(store, keyvalue);  // Copies value to return parameter
   LLIterator_Remove(itr, &PayloadFree);
   LLIterator_Free(itr);  // Free iterator
   table->num_elements -= 1;  // Update number of elements in table
@@ -319,18 +319,19 @@ bool HTIterator_Next(HTIterator *iter) {
 
   // STEP 5: implement HTIterator_Next.
   if (iter->bucket_it == NULL || !LLIterator_IsValid(iter->bucket_it)) {
-    // Must be at end of table for there to be no iterators stored
+    // Must be at end of table for there to be no valid iterators stored.
     return false;
   }
   if (!LLIterator_Next(iter->bucket_it)) {
     // We are at end of bucket, so check the next bucket for elements
     if (iter->bucket_it != NULL) {
-        LLIterator_Free(iter->bucket_it);
+      // Free current iterator
+      LLIterator_Free(iter->bucket_it);
     }
+    // Represents bucket index. We will start at next bucket
     int constIndex = iter->bucket_idx + 1;
     int i;
     // Keep going through buckets until we find a valid iterator
-    // We start at next bucket
     for (i = constIndex; i < iter->ht->num_buckets; i++) {
       if (LinkedList_NumElements(iter->ht->buckets[i]) > 0) {
         iter->bucket_idx = i;
@@ -357,8 +358,7 @@ bool HTIterator_Get(HTIterator *iter, HTKeyValue_t *keyvalue) {
   HTKeyValue_t* store = NULL;
   // Sends back the old (key, value)
   LLIterator_Get(iter->bucket_it, (LLPayload_t*) &store);
-  keyvalue->value = store->value;
-  keyvalue->key = store->key;
+  CopyKeyValue(store, keyvalue);
   return true;
 }
 

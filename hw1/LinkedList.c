@@ -75,7 +75,6 @@ void LinkedList_Push(LinkedList *list, LLPayload_t payload) {
     Verify333(list->tail == NULL);
     ln->next = ln->prev = NULL;
     list->head = list->tail = ln;
-    list->num_elements = 1;
   } else {
     // STEP 3: typical case; list has >=1 elements
     // Adds to head of list
@@ -84,8 +83,8 @@ void LinkedList_Push(LinkedList *list, LLPayload_t payload) {
     list->head = ln;  // Sets head to new node
     ln->next = temp;
     ln->prev = NULL;  // Makes sure prev is set to Null
-    list->num_elements += 1;  // Increament count of elements
   }
+  list->num_elements += 1;  // Increament count of elements
 }
 
 bool LinkedList_Pop(LinkedList *list, LLPayload_t *payload_ptr) {
@@ -219,7 +218,7 @@ bool LLIterator_Next(LLIterator *iter) {
   // you should move the iterator past the end of the list
   bool output = true;
   if (iter->node->next == NULL) {  // Indicates we are at the last element
-    output =  false;
+    output = false;
   }
   iter->node = iter->node->next;
   return output;  // you may need to change this return value
@@ -255,7 +254,7 @@ bool LLIterator_Remove(LLIterator *iter,
   // Release payload
   (*payload_free_function)(iter->node->payload);
   LinkedListNode* temp = (iter->node);
-  if (iter->list->num_elements == 1) {
+  if (iter->list->num_elements == 1) {  // Handles first case
     iter->list->head = NULL;
     iter->list->tail = NULL;
     iter->node = NULL;
