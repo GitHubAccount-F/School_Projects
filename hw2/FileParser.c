@@ -69,17 +69,32 @@ char* ReadFileToString(const char* file_name, int* size) {
   // Use the stat system call to fetch a "struct stat" that describes
   // properties of the file. ("man 2 stat"). You can assume we're on a 64-bit
   // system, with a 64-bit off_t field.
-
+  int store = stat(file_name, &file_stat);
+  if (store == -1) {
+    perror("File open failed");
+    return NULL;
+  }
 
 
   // STEP 2.
   // Make sure this is a "regular file" and not a directory or something else
   // (use the S_ISREG macro described in "man 2 stat").
 
+  // Case for when it's not a regular file
+  if (!S_ISREG(file_stat.st_mode)) {
+    perror("Not a regular file");
+    return NULL;
+  }
 
 
   // STEP 3.
   // Attempt to open the file for reading (see also "man 2 open").
+  
+  fd = open(file_name, O_RDONLY);
+  if (fd == -1) {
+    perror("open failed");
+    exit(EXIT_FAILURE);
+  }
 
 
 
@@ -87,6 +102,7 @@ char* ReadFileToString(const char* file_name, int* size) {
   // Allocate space for the file, plus 1 extra byte to
   // '\0'-terminate the string.
 
+  buf = (char*) malloc(file_stat.st_size + 1);
 
 
   // STEP 5.
@@ -98,7 +114,23 @@ char* ReadFileToString(const char* file_name, int* size) {
   // or a non-recoverable error.  Read the man page for read() carefully, in
   // particular what the return values -1 and 0 imply.
   left_to_read = file_stat.st_size;
+  num_read = 0;
   while (left_to_read > 0) {
+    result = read(fd, buf + num_read, left_to_read);
+    if (result == -1) {
+      if (errno != EINTR && errno != EAGAIN) {
+        // a real error happened
+        close(fd);
+        perror("read failed");
+        return NULL;
+      }
+      continue;  // EINTR or EAGAIN happened, so loop around and try again
+    }
+    if (result == 0) {
+      break;  // reach end of file
+    }
+    num_read = result;
+    left_to_read -= result;
   }
 
   // Great, we're done!  We hit the end of the file and we read
@@ -199,10 +231,21 @@ static void InsertContent(HashTable* tab, char* content) {
   // Each time you find a word that you want to record in the hashtable, call
   // AddWordPosition() helper with appropriate arguments, e.g.,
   // AddWordPosition(tab, wordstart, pos);
-
-  while (1) {
-    break;  // you may want to change this
-  }  // end while-loop
+  int index = 0;
+  int start = 0;  // Start of word
+  while (cur_ptr[index] != '\0') {  // While we haven't reached end of string
+    if(isalpha(cur_ptr[index]) > 0) {  // We found a word
+      word_start = cur_ptr + index;  // Start of the word
+      start = index;
+      while (isalpha(cur_ptr[index]) > 0) {
+        cur_ptr[index] = tolower(cur_ptr[index]);
+        index++;  // Move to next character 
+      }
+      cur_ptr[index] = '\0';  // cut off word using null terminator
+      AddWordPosition(tab, word_start, start);
+    }
+    index++;
+  }
 }
 
 static void AddWordPosition(HashTable* tab, char* word,
@@ -210,7 +253,9 @@ static void AddWordPosition(HashTable* tab, char* word,
   HTKey_t hash_key;
   HTKeyValue_t kv;
   WordPositions *wp;
-
+  if(strcmp(word, "article") == 0) {
+    //printf("index = %d\n", (int)pos);
+  }
   // Hash the string.
   hash_key = FNVHash64((unsigned char*) word, strlen(word));
 
@@ -233,5 +278,16 @@ static void AddWordPosition(HashTable* tab, char* word,
     // No; this is the first time we've seen this word.  Allocate and prepare
     // a new WordPositions structure, and append the new position to its list
     // using a similar ugly hack as right above.
+    wp = (WordPositions*) malloc(sizeof(WordPositions));
+    char* store = (char*) malloc(sizeof(word) + 1);
+    strcpy(store, word);
+    wp->word = store;  // Create word
+    //printf("word %s %d\n", wp->word, (int)pos);
+    wp->positions = LinkedList_Allocate();  // Create list
+    LinkedList_Append(wp->positions, (LLPayload_t) (int64_t)pos);  // add position to list
+    // Insert struct into hashtable
+    kv.key = hash_key;
+    kv.value = wp; 
+    HashTable_Insert(tab, kv, NULL);
   }
 }
