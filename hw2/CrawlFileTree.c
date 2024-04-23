@@ -133,7 +133,6 @@ static void HandleDir(char* dir_path, DIR* d, DocTable** doc_table,
   // read the directory entries in the loop ("man 3 readdir").
   // Exit out of the loop when we reach the end of the directory.
 
-  // Open the current directory
   for(i = 0; true; i++) {
     // Read directory entries
     dirent = readdir(d);

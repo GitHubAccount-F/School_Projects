@@ -242,6 +242,7 @@ static void InsertContent(HashTable* tab, char* content) {
         index++;  // Move to next character 
       }
       cur_ptr[index] = '\0';  // cut off word using null terminator
+      Verify333(strlen(word_start) != 0);
       AddWordPosition(tab, word_start, start);
     }
     index++;
@@ -253,9 +254,6 @@ static void AddWordPosition(HashTable* tab, char* word,
   HTKey_t hash_key;
   HTKeyValue_t kv;
   WordPositions *wp;
-  if(strcmp(word, "article") == 0) {
-    //printf("index = %d\n", (int)pos);
-  }
   // Hash the string.
   hash_key = FNVHash64((unsigned char*) word, strlen(word));
 
@@ -278,16 +276,19 @@ static void AddWordPosition(HashTable* tab, char* word,
     // No; this is the first time we've seen this word.  Allocate and prepare
     // a new WordPositions structure, and append the new position to its list
     // using a similar ugly hack as right above.
+    size_t length = strlen(word);
     wp = (WordPositions*) malloc(sizeof(WordPositions));
-    char* store = (char*) malloc(sizeof(word) + 1);
+    char* store = (char*) malloc(length + 1);
     strcpy(store, word);
     wp->word = store;  // Create word
+    Verify333(strlen(wp->word) == strlen(word));
+    Verify333(strcmp(wp->word,word) == 0);
     //printf("word %s %d\n", wp->word, (int)pos);
     wp->positions = LinkedList_Allocate();  // Create list
     LinkedList_Append(wp->positions, (LLPayload_t) (int64_t)pos);  // add position to list
     // Insert struct into hashtable
     kv.key = hash_key;
-    kv.value = wp; 
+    kv.value = (HTValue_t)wp; 
     HashTable_Insert(tab, kv, NULL);
   }
 }
