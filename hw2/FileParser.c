@@ -129,7 +129,7 @@ char* ReadFileToString(const char* file_name, int* size) {
     if (result == 0) {
       break;  // reach end of file
     }
-    num_read = result;
+    num_read += result;
     left_to_read -= result;
   }
 
