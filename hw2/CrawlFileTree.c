@@ -134,10 +134,6 @@ static void HandleDir(char* dir_path, DIR* d, DocTable** doc_table,
   // Exit out of the loop when we reach the end of the directory.
 
   // Open the current directory
-  d = opendir(dir_path);
-  if (d == NULL) {
-    perror("opendir");
-  }
   for(i = 0; true; i++) {
     // Read directory entries
     dirent = readdir(d);
@@ -151,15 +147,13 @@ static void HandleDir(char* dir_path, DIR* d, DocTable** doc_table,
     // How do you compare strings in C?
   
     if(strcmp(".",dirent->d_name) == 0 || strcmp("..",dirent->d_name) == 0) {
+      i--;
       continue;
     }
 
     //
     // Record the name and directory status.
     //
-
-    entries[i].path_name = dirent->d_name;
-    entries[i].is_dir = dirent->d_type;
 
 
     // Resize the entries array if it's too small.
@@ -203,11 +197,9 @@ static void HandleDir(char* dir_path, DIR* d, DocTable** doc_table,
       //
       // If it is neither, skip the file.
       if(S_ISREG(st.st_mode)) {
-        entries[i].is_dir = 1;
+        entries[i].is_dir = false;
       } else if(S_ISDIR(st.st_mode)) {
-        entries[i].is_dir = 0;
-      } else {
-        continue;  // skips the file
+        entries[i].is_dir = true;
       }
 
     }
@@ -247,7 +239,9 @@ static void HandleFile(char* file_path, DocTable** doc_table,
   // of the file.
   
   char* string = ReadFileToString(file_path, &file_len);
+  Verify333(string != NULL);
   tab = ParseIntoWordPositionsTable(string);
+  Verify333(tab != NULL);
 
 
   // STEP 5.
@@ -269,7 +263,7 @@ static void HandleFile(char* file_path, DocTable** doc_table,
     // document ID, and positions linked list into the inverted index.
     HTIterator_Remove(it, &kv);
     wp = (WordPositions*)kv.value;
-    MemIndex_AddPostingList(*index, (char*)kv.key, doc_id, (LinkedList*)kv.value);
+    MemIndex_AddPostingList(*index, wp->word, doc_id, wp->positions);
 
 
     // Since we've transferred ownership of the memory associated with both
