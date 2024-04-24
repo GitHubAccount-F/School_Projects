@@ -94,10 +94,11 @@ void MemIndex_AddPostingList(MemIndex* index, char* word, DocID_t doc_id,
   HTKey_t key = FNVHash64((unsigned char*) word, strlen(word));
   HTKeyValue_t mi_kv, postings_kv, unused;
   WordPostings* wp;
+
   // STEP 1.
   // Remove this early return.  We added this in here so that your unittests
   // would pass even if you haven't finished your MemIndex implementation.
-  
+
 
 
   // First, we have to see if the passed-in word already exists in
@@ -118,10 +119,10 @@ void MemIndex_AddPostingList(MemIndex* index, char* word, DocID_t doc_id,
       wp->word = word;
       // Create a hashtable with 1 bucket initially for the document
       wp->postings = HashTable_Allocate(1);
-      HTKeyValue_t temp;
-      temp.key = key;
-      temp.value = wp;
-      HashTable_Insert(index, temp, NULL);
+      // create key value to place into MemIndex table
+      mi_kv.key = key;
+      mi_kv.value = wp;
+      HashTable_Insert(index, mi_kv, NULL);
 
 
 
@@ -163,6 +164,7 @@ LinkedList* MemIndex_Search(MemIndex* index, char* query[], int query_len) {
   HTKeyValue_t kv;
   WordPostings* wp;
   HTKey_t key;
+  HTIterator* itr;
   int i;
 
   // If the user provided us with an empty search query, return NULL
@@ -183,50 +185,21 @@ LinkedList* MemIndex_Search(MemIndex* index, char* query[], int query_len) {
     return NULL;
   }
 
+  // WordPostings is what is stored in the value from the Hashatble
   wp = (WordPostings*) kv.value;
-  HTIterator* itr = HTIterator_Allocate(wp->postings);
-  DocID_t tableKey = 0;  // represents current key in hashtable
+  itr = HTIterator_Allocate(wp->postings);
   ret_list = LinkedList_Allocate();
-  // Checks to see if any document contains the first word, 
+  // Checks to see if any document contains the first word,
   // if not, then return NULL
-  if (!HTIterator_Get(itr, &kv)) {
-    return NULL;
-  }
-  tableKey = kv.key;
-  bool check = HTIterator_Next(itr);
-  // Tests if only one document was present, in which
-  // we only add 1 element to the list
-  if (!check) {
-    SearchResult* temp = (SearchResult*) malloc(sizeof(SearchResult));
-    temp->doc_id = tableKey;
-    temp->rank = 1;
-    LinkedList_Append(ret_list, (LLPayload_t) temp);
-  }
   while (HTIterator_Get(itr, &kv)) {
-    check = HTIterator_Next(itr); // potentially skipping
-    if (!check || kv.key != tableKey) {
-      if (!check && kv.key != tableKey) {
-        SearchResult* temp = (SearchResult*) malloc(sizeof(SearchResult));
-        SearchResult* temp2 = (SearchResult*) malloc(sizeof(SearchResult));
-        DocID_t storeKey = (DocID_t)kv.key;
-        temp->doc_id = tableKey;
-        HashTable_Find(wp->postings, tableKey, &kv);
-        temp->rank = LinkedList_NumElements(kv.value);
-        temp2->doc_id = storeKey;
-        HashTable_Find(wp->postings, storeKey, &kv);
-        temp2->rank = LinkedList_NumElements(kv.value);
-        LinkedList_Append(ret_list, (LLPayload_t) temp);
-        LinkedList_Append(ret_list, (LLPayload_t) temp2);
-      } else {
-        SearchResult* temp = (SearchResult*) malloc(sizeof(SearchResult));
-        DocID_t storeKey = (DocID_t)kv.key;
-        temp->doc_id = tableKey;
-        HashTable_Find(wp->postings, tableKey, &kv);
-        temp->rank = LinkedList_NumElements(kv.value);
-        LinkedList_Append(ret_list, (LLPayload_t) temp);
-        tableKey = storeKey;
-      }
-    }
+    // Create an entry for ret_list
+    SearchResult* temp = (SearchResult*) malloc(sizeof(SearchResult));
+    temp->doc_id = kv.key;
+    // Retrieves number of elements in list stored in the Word table
+    HashTable_Find(wp->postings, kv.key, &kv);
+    temp->rank = LinkedList_NumElements(kv.value);
+    LinkedList_Append(ret_list, (LLPayload_t) temp);
+    HTIterator_Next(itr);
   }
   // free iterator once we are done with it
   HTIterator_Free(itr);
@@ -275,19 +248,20 @@ LinkedList* MemIndex_Search(MemIndex* index, char* query[], int query_len) {
         // get current iterator element
         SearchResult* temp = NULL;
         LLIterator_Get(ll_it, (LLPayload_t) &temp);
-        // Retrieves the WordPosting, which has the hash table corresponding 
+        // Retrieves the WordPosting, which has the hash table corresponding
         // to the word
-        WordPostings* wp2 = kv.value;
+        wp = kv.value;
         HTKeyValue_t store = kv;
-        if (!HashTable_Find(wp2->postings, temp->doc_id, &store)) {
-          // current word doesn't have that document, so remove it from the list
+        // Checks to see if the document is found in the HashTable
+        // of the current word
+        if (!HashTable_Find(wp->postings, temp->doc_id, &store)) {
+          // if not then remove
           LLIterator_Remove(ll_it, &free);
         } else {
-          // update rank
+          // update rank and more on to next element
           temp->rank += LinkedList_NumElements(kv.value);
           LLIterator_Next(ll_it);
         }
-
       }
     }
     LLIterator_Free(ll_it);
@@ -305,34 +279,3 @@ LinkedList* MemIndex_Search(MemIndex* index, char* query[], int query_len) {
   LinkedList_Sort(ret_list, false, &MI_SearchResultComparator);
   return ret_list;
 }
-/*  else {  // when there is 2 or more documents associated with the word
-    while (HTIterator_Get(itr, &kv)) {
-      bool temp = HTIterator_Next(itr);
-      // Either at end of table, or onto the next key in the table
-      if (!temp || kv.key != tableKey) {
-        // if we are at the end of the table and the key remains the same
-        if (!temp &&  kv.key != tableKey) {
-          SearchResult* temp = (SearchResult*) malloc(sizeof(SearchResult));
-          SearchResult* temp2 = (SearchResult*) malloc(sizeof(SearchResult));
-          temp->doc_id = tableKey;
-          temp->rank = count;
-          temp2->doc_id = kv.key;
-          temp2->rank = 1;
-          LinkedList_Append(ret_list, (LLPayload_t) temp2);
-          LinkedList_Append(ret_list, (LLPayload_t) temp);
-
-        } else {
-          SearchResult* temp = (SearchResult*) malloc(sizeof(SearchResult));
-          temp->doc_id = tableKey;
-          temp->rank = count;
-          LinkedList_Append(ret_list, (LLPayload_t) temp);
-          tableKey = kv.key;
-          count = 1;
-        }
-        // nothing important happened, we move onto next element
-        // in the table
-      } else {
-       count++;
-      }
-    }
-`*/
