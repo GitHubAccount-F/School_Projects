@@ -133,9 +133,11 @@ static void HandleDir(char* dir_path, DIR* d, DocTable** doc_table,
   // read the directory entries in the loop ("man 3 readdir").
   // Exit out of the loop when we reach the end of the directory.
 
-  for(i = 0; true; i++) {
+  for (i = 0; true; i++) {
     // Read directory entries
     dirent = readdir(d);
+    // tests to see if there is any more entries in
+    // the directory, if not the exit loop
     if (dirent == NULL) {
       break;
     }
@@ -144,8 +146,8 @@ static void HandleDir(char* dir_path, DIR* d, DocTable** doc_table,
     // "continue" expression to begin the next iteration of the loop.  What
     // field in the dirent could we use to find out the name of the entry?
     // How do you compare strings in C?
-  
-    if(strcmp(".",dirent->d_name) == 0 || strcmp("..",dirent->d_name) == 0) {
+
+    if (strcmp(".", dirent->d_name) == 0 || strcmp("..", dirent->d_name) == 0) {
       i--;
       continue;
     }
@@ -195,12 +197,17 @@ static void HandleDir(char* dir_path, DIR* d, DocTable** doc_table,
       // using/ HandleDir() in our second pass.
       //
       // If it is neither, skip the file.
-      if(S_ISREG(st.st_mode)) {
+      if (S_ISREG(st.st_mode)) {
         entries[i].is_dir = false;
-      } else if(S_ISDIR(st.st_mode)) {
+      } else if (S_ISDIR(st.st_mode)) {
         entries[i].is_dir = true;
+      } else {
+        // Skips if neither
+        // free the malloced space for the path name
+        free(entries[i].path_name);
+        i--;
+        continue;
       }
-
     }
   }  // end iteration over directory contents ("first pass").
 
@@ -236,11 +243,14 @@ static void HandleFile(char* file_path, DocTable** doc_table,
   // STEP 4.
   // Invoke ParseIntoWordPositionsTable() to build the word hashtable out
   // of the file.
-  
   char* string = ReadFileToString(file_path, &file_len);
   Verify333(string != NULL);
   tab = ParseIntoWordPositionsTable(string);
-  Verify333(tab != NULL);
+  // when tab is null, such as when string contains non-asci characters
+  // we skip this call
+  if (tab == NULL) {
+    return;
+  }
 
 
   // STEP 5.

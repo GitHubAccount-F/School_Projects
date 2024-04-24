@@ -38,21 +38,14 @@ DocTable* DocTable_Allocate(void) {
 
   return dt;
 }
-/*
-// Input: payload - A pointer to a payload contained in the Heap.
-// Output: Free's payload from the heap.
-static void PayloadFree(HTValue_t payload) {
-  free(payload);
-}
-*/
 
 // Input: A string representing the path to a document
 // Output: Returns a hash key for that path
 static HTKey_t CalculateHashKey(char* doc_name) {
-  size_t length  = strlen(doc_name + 1); // + 1 to include null termin
+  size_t length  = strlen(doc_name);
   HTKey_t key = FNVHash64((unsigned char*)doc_name, length);
   return key;
-}//
+}
 
 void DocTable_Free(DocTable* table) {
   Verify333(table != NULL);
@@ -76,33 +69,38 @@ DocID_t DocTable_Add(DocTable* table, char* doc_name) {
   DocID_t *doc_id;
   DocID_t* res;
   HTKeyValue_t kv, old_kv;
+  HTKey_t hashKey;
 
   Verify333(table != NULL);
 
   // STEP 2.
   // Check to see if the document already exists.  Then make a copy of the
   // doc_name and allocate space for the new ID
-  HTKey_t hashKey = CalculateHashKey(doc_name);
+  // Uses function to calculate hashkey for file name
+  hashKey = CalculateHashKey(doc_name);
   if (HashTable_Find(table->name_to_id, hashKey, &old_kv)) {
+    // We found the document, so we return it's DocID
     res = (DocID_t*)old_kv.value;
     return *res;
   }
   // Case when it was not found
+  // malloc space for docId and word on the heap so that it
+  // can't be lost
   doc_id =  (DocID_t*) malloc(sizeof(DocID_t));
-  doc_copy = (char*) malloc((strlen(doc_name)) + 1); 
-  doc_copy = strcpy(doc_copy, doc_name);
+  doc_copy = (char*) malloc((strlen(doc_name)) + 1);
+  // copy over word to the heap
+  strncpy(doc_copy, doc_name, strlen(doc_name) + 1);
   *doc_id = table->max_id;
   table->max_id++;
 
 
 
-  
+
 
   // STEP 3.
   // Set up the key/value for the id->name mapping, and do the insert.
-  
   kv.key = (HTKey_t) *doc_id;
-  kv.value = doc_copy;
+  kv.value = (HTValue_t) doc_copy;
   // Verifies that this is false, i.e. the first time we add this to the table
   bool output1 = HashTable_Insert(table->id_to_name, kv, &old_kv);
   Verify333(!output1);
@@ -124,7 +122,7 @@ DocID_t DocTable_Add(DocTable* table, char* doc_name) {
 }
 
 DocID_t DocTable_GetDocID(DocTable* table, char* doc_name) {
-  //HTKey_t key;
+  HTKey_t key;
   HTKeyValue_t kv;
   DocID_t* res;
 
@@ -133,13 +131,17 @@ DocID_t DocTable_GetDocID(DocTable* table, char* doc_name) {
 
   // STEP 5.
   // Try to find the passed-in doc in name_to_id table.
-  HTKey_t key = CalculateHashKey(doc_name);
+  // Uses function to calculate hashkey for file name
+  key = CalculateHashKey(doc_name);
 
-  if(HashTable_Find(table->name_to_id, key, &kv)) {
+  if (HashTable_Find(table->name_to_id, key, &kv)) {
+    // We found the document, so now we return it's
+    // associated docID
     res = (DocID_t*)kv.value;
     return *res;
   }
-  return INVALID_DOCID;  // you may want to change this
+  // case when document was not ever found
+  return INVALID_DOCID;
 }
 
 char* DocTable_GetDocName(DocTable* table, DocID_t doc_id) {
@@ -153,7 +155,7 @@ char* DocTable_GetDocName(DocTable* table, DocID_t doc_id) {
   // and either return the string (i.e., the (char *)
   // saved in the value field for that key) or
   // NULL if the key isn't in the table.
-  if(HashTable_Find(table->id_to_name, (HTKey_t)doc_id, &kv)) {
+  if (HashTable_Find(table->id_to_name, (HTKey_t)doc_id, &kv)) {
     return (char*) kv.value;
   }
 

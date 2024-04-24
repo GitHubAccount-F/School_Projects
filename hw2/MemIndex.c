@@ -159,7 +159,6 @@ void MemIndex_AddPostingList(MemIndex* index, char* word, DocID_t doc_id,
 }
 
 LinkedList* MemIndex_Search(MemIndex* index, char* query[], int query_len) {
-  //printf("here12\n");
   LinkedList* ret_list;
   HTKeyValue_t kv;
   WordPostings* wp;
@@ -184,11 +183,9 @@ LinkedList* MemIndex_Search(MemIndex* index, char* query[], int query_len) {
     return NULL;
   }
 
-  //printf("here13\n");
   wp = (WordPostings*) kv.value;
   HTIterator* itr = HTIterator_Allocate(wp->postings);
   DocID_t tableKey = 0;  // represents current key in hashtable
-  printf("num of element in table %d\n", HashTable_NumElements(wp->postings));
   ret_list = LinkedList_Allocate();
   // Checks to see if any document contains the first word, 
   // if not, then return NULL
@@ -196,7 +193,6 @@ LinkedList* MemIndex_Search(MemIndex* index, char* query[], int query_len) {
     return NULL;
   }
   tableKey = kv.key;
-  printf("tablekey = %ld\n",tableKey);
   bool check = HTIterator_Next(itr);
   // Tests if only one document was present, in which
   // we only add 1 element to the list
@@ -210,8 +206,6 @@ LinkedList* MemIndex_Search(MemIndex* index, char* query[], int query_len) {
     check = HTIterator_Next(itr); // potentially skipping
     if (!check || kv.key != tableKey) {
       if (!check && kv.key != tableKey) {
-        printf("tablekey = %ld\n",tableKey);
-        printf("key = %ld\n",kv.key);
         SearchResult* temp = (SearchResult*) malloc(sizeof(SearchResult));
         SearchResult* temp2 = (SearchResult*) malloc(sizeof(SearchResult));
         DocID_t storeKey = (DocID_t)kv.key;
@@ -219,7 +213,8 @@ LinkedList* MemIndex_Search(MemIndex* index, char* query[], int query_len) {
         HashTable_Find(wp->postings, tableKey, &kv);
         temp->rank = LinkedList_NumElements(kv.value);
         temp2->doc_id = storeKey;
-        temp2->rank = 1;
+        HashTable_Find(wp->postings, storeKey, &kv);
+        temp2->rank = LinkedList_NumElements(kv.value);
         LinkedList_Append(ret_list, (LLPayload_t) temp);
         LinkedList_Append(ret_list, (LLPayload_t) temp2);
       } else {
@@ -233,78 +228,6 @@ LinkedList* MemIndex_Search(MemIndex* index, char* query[], int query_len) {
       }
     }
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  /*
-  if (!check) {
-    SearchResult* temp = (SearchResult*) malloc(sizeof(SearchResult));
-    temp->doc_id = tableKey;
-    temp->rank = 1;
-    LinkedList_Append(ret_list, (LLPayload_t) temp);
-  }
-
-  while (HTIterator_Get(itr, &kv)) {
-    check = HTIterator_Next(itr);
-    if (!check || kv.key != tableKey) {
-      if (check && kv.key != tableKey) {
-        SearchResult* temp = (SearchResult*) malloc(sizeof(SearchResult));
-        temp->doc_id = tableKey;
-        DocID_t storeKey = (DocID_t)kv.key;
-        HashTable_Find(wp->postings, tableKey, &kv);
-        temp->rank = LinkedList_NumElements(kv.value);
-        LinkedList_Append(ret_list, (LLPayload_t) temp);
-        tableKey = storeKey;
-      } else if(!check && kv.key != tableKey) {
-          printf("key = %ld\n",tableKey);
-          SearchResult* temp = (SearchResult*) malloc(sizeof(SearchResult));
-          SearchResult* temp2 = (SearchResult*) malloc(sizeof(SearchResult));
-          temp->doc_id = tableKey;
-          HashTable_Find(wp->postings, tableKey, &kv);
-          DocID_t storeKey = (DocID_t)kv.key;
-          temp->rank = LinkedList_NumElements(kv.value);
-          temp2->doc_id = storeKey;
-          temp2->rank = 1;
-          LinkedList_Append(ret_list, (LLPayload_t) temp);
-          LinkedList_Append(ret_list, (LLPayload_t) temp);
-      } else if (!check && kv.key == tableKey) {
-          SearchResult* temp = (SearchResult*) malloc(sizeof(SearchResult));
-          temp->doc_id = tableKey;
-          HashTable_Find(wp->postings, tableKey, &kv);
-          temp->rank = LinkedList_NumElements(kv.value);
-          LinkedList_Append(ret_list, (LLPayload_t) temp);
-      }
-    }
-    // else nothing 
-  }
-  */
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
   // free iterator once we are done with it
   HTIterator_Free(itr);
 
@@ -318,7 +241,6 @@ LinkedList* MemIndex_Search(MemIndex* index, char* query[], int query_len) {
 
   // OK, there are additional query words.  Handle them one
   // at a time.
-  //printf("here15\n");
   for (i = 1; i < query_len; i++) {
     LLIterator *ll_it;
     int j, num_docs;
@@ -332,7 +254,6 @@ LinkedList* MemIndex_Search(MemIndex* index, char* query[], int query_len) {
       LinkedList_Free(ret_list, &free);
       return NULL;
     }
-    //printf("here16\n");
 
 
     // STEP 6.
@@ -346,30 +267,28 @@ LinkedList* MemIndex_Search(MemIndex* index, char* query[], int query_len) {
     // number of matches for the current word.
     //
     // If it isn't, we delete that docID from the search result list.
-    //printf("potential\n");
     ll_it = LLIterator_Allocate(ret_list);
     Verify333(ll_it != NULL);
     num_docs = LinkedList_NumElements(ret_list);
-    printf("num_docs = %d\n", num_docs);
     for (j = 0; j < num_docs; j++) {
-      // get current iterator element
-      SearchResult* temp = NULL;
-      LLIterator_Get(ll_it, (LLPayload_t) &temp);
-      //printf("her1\n");
-      // Retrieves the WordPosting, which has the hash table corresponding 
-      // to the word
-      WordPostings* wp2 = kv.value;
-      if (!HashTable_Find(wp2->postings, temp->doc_id, &kv)) {
-        // current word doesn't have that document, so remove it from the list
-        //printf("here\n");
-        LLIterator_Remove(ll_it, &free);
-      } else {
-        // update rank
-        //printf("her2\n");
-        temp->rank += LinkedList_NumElements(kv.value);
+      if (LLIterator_IsValid(ll_it)) {
+        // get current iterator element
+        SearchResult* temp = NULL;
+        LLIterator_Get(ll_it, (LLPayload_t) &temp);
+        // Retrieves the WordPosting, which has the hash table corresponding 
+        // to the word
+        WordPostings* wp2 = kv.value;
+        HTKeyValue_t store = kv;
+        if (!HashTable_Find(wp2->postings, temp->doc_id, &store)) {
+          // current word doesn't have that document, so remove it from the list
+          LLIterator_Remove(ll_it, &free);
+        } else {
+          // update rank
+          temp->rank += LinkedList_NumElements(kv.value);
+          LLIterator_Next(ll_it);
+        }
+
       }
-      LLIterator_Next(ll_it);
-  
     }
     LLIterator_Free(ll_it);
 

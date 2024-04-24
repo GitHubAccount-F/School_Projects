@@ -64,12 +64,13 @@ char* ReadFileToString(const char* file_name, int* size) {
   int result, fd;
   ssize_t num_read;
   size_t left_to_read;
+  int store;
 
   // STEP 1.
   // Use the stat system call to fetch a "struct stat" that describes
   // properties of the file. ("man 2 stat"). You can assume we're on a 64-bit
   // system, with a 64-bit off_t field.
-  int store = stat(file_name, &file_stat);
+  store = stat(file_name, &file_stat);
   if (store == -1) {
     perror("File open failed");
     return NULL;
@@ -89,7 +90,6 @@ char* ReadFileToString(const char* file_name, int* size) {
 
   // STEP 3.
   // Attempt to open the file for reading (see also "man 2 open").
-  
   fd = open(file_name, O_RDONLY);
   if (fd == -1) {
     perror("open failed");
@@ -115,7 +115,7 @@ char* ReadFileToString(const char* file_name, int* size) {
   // particular what the return values -1 and 0 imply.
   left_to_read = file_stat.st_size;
   num_read = 0;
-  while (left_to_read > 0) {
+  while (left_to_read > 0) {  // checks if we still have more to read
     result = read(fd, buf + num_read, left_to_read);
     if (result == -1) {
       if (errno != EINTR && errno != EAGAIN) {
@@ -129,8 +129,8 @@ char* ReadFileToString(const char* file_name, int* size) {
     if (result == 0) {
       break;  // reach end of file
     }
-    num_read += result;
-    left_to_read -= result;
+    num_read += result;  // add in how much we read in so far
+    left_to_read -= result;  // reduce total amount we need to read
   }
 
   // Great, we're done!  We hit the end of the file and we read
@@ -234,12 +234,14 @@ static void InsertContent(HashTable* tab, char* content) {
   int index = 0;
   int start = 0;  // Start of word
   while (cur_ptr[index] != '\0') {  // While we haven't reached end of string
-    if(isalpha(cur_ptr[index]) > 0) {  // We found a word
+    if (isalpha(cur_ptr[index]) > 0) {  // We found a word
       word_start = cur_ptr + index;  // Start of the word
-      start = index;
+      start = index;  // saves position of the word
+      // keeps iterating until we enter the end of the word
+      // which we then add to table
       while (isalpha(cur_ptr[index]) > 0) {
         cur_ptr[index] = tolower(cur_ptr[index]);
-        index++;  // Move to next character 
+        index++;  // Move to next character
       }
       cur_ptr[index] = '\0';  // cut off word using null terminator
       Verify333(strlen(word_start) != 0);
@@ -276,19 +278,22 @@ static void AddWordPosition(HashTable* tab, char* word,
     // No; this is the first time we've seen this word.  Allocate and prepare
     // a new WordPositions structure, and append the new position to its list
     // using a similar ugly hack as right above.
-    size_t length = strlen(word);
+    size_t length = strlen(word);  // finds length of the word
     wp = (WordPositions*) malloc(sizeof(WordPositions));
+    // +1 to account for null terminator
     char* store = (char*) malloc(length + 1);
-    strcpy(store, word);
-    wp->word = store;  // Create word
+    strncpy(store, word, length + 1);
+    wp->word = store;  // insert word
     Verify333(strlen(wp->word) == strlen(word));
-    Verify333(strcmp(wp->word,word) == 0);
-    //printf("word %s %d\n", wp->word, (int)pos);
-    wp->positions = LinkedList_Allocate();  // Create list
-    LinkedList_Append(wp->positions, (LLPayload_t) (int64_t)pos);  // add position to list
+    Verify333(strcmp(wp->word, word) == 0);
+    // Creates list
+    wp->positions = LinkedList_Allocate();
+    // adds position of word the the list
+    LinkedList_Append(wp->positions, (LLPayload_t) (int64_t)pos);
     // Insert struct into hashtable
     kv.key = hash_key;
-    kv.value = (HTValue_t)wp; 
+    kv.value = (HTValue_t)wp;
+    // Inserts word and positions into table
     HashTable_Insert(tab, kv, NULL);
   }
 }
