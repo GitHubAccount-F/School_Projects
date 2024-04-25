@@ -239,11 +239,14 @@ static void HandleFile(char* file_path, DocTable** doc_table,
   HashTable* tab = NULL;
   DocID_t doc_id;
   HTIterator* it;
+  HTKeyValue_t kv;
+  WordPositions* wp;
+  char* string;
 
   // STEP 4.
   // Invoke ParseIntoWordPositionsTable() to build the word hashtable out
   // of the file.
-  char* string = ReadFileToString(file_path, &file_len);
+  string = ReadFileToString(file_path, &file_len);
   Verify333(string != NULL);
   tab = ParseIntoWordPositionsTable(string);
   // when tab is null, such as when string contains non-asci characters
@@ -263,8 +266,6 @@ static void HandleFile(char* file_path, DocTable** doc_table,
   it = HTIterator_Allocate(tab);
   Verify333(it != NULL);
   while (HTIterator_IsValid(it)) {
-    WordPositions* wp;
-    HTKeyValue_t kv;
 
     // STEP 6.
     // Use HTIterator_Remove() to extract the next WordPositions structure out

@@ -172,7 +172,6 @@ LinkedList* MemIndex_Search(MemIndex* index, char* query[], int query_len) {
   if (query_len == 0) {
     return NULL;
   }
-
   // STEP 4.
   // The most interesting part of Part C starts here...!
   //
@@ -184,7 +183,6 @@ LinkedList* MemIndex_Search(MemIndex* index, char* query[], int query_len) {
   if (!HashTable_Find(index, key, &kv)) {
     return NULL;
   }
-
   // WordPostings is what is stored in the value from the Hashatble
   wp = (WordPostings*) kv.value;
   itr = HTIterator_Allocate(wp->postings);
@@ -195,7 +193,7 @@ LinkedList* MemIndex_Search(MemIndex* index, char* query[], int query_len) {
     // Create an entry for ret_list
     SearchResult* temp = (SearchResult*) malloc(sizeof(SearchResult));
     temp->doc_id = kv.key;
-    // Retrieves number of elements in list stored in the Word table
+    // Retrieves number of elements in list stored in the Word's table
     HashTable_Find(wp->postings, kv.key, &kv);
     temp->rank = LinkedList_NumElements(kv.value);
     LinkedList_Append(ret_list, (LLPayload_t) temp);
@@ -203,7 +201,6 @@ LinkedList* MemIndex_Search(MemIndex* index, char* query[], int query_len) {
   }
   // free iterator once we are done with it
   HTIterator_Free(itr);
-
   // Great; we have our search results for the first query
   // word.  If there is only one query word, we're done!
   // Sort the result list and return it to the caller.
@@ -244,28 +241,28 @@ LinkedList* MemIndex_Search(MemIndex* index, char* query[], int query_len) {
     Verify333(ll_it != NULL);
     num_docs = LinkedList_NumElements(ret_list);
     for (j = 0; j < num_docs; j++) {
-      if (LLIterator_IsValid(ll_it)) {
-        // get current iterator element
-        SearchResult* temp = NULL;
-        LLIterator_Get(ll_it, (LLPayload_t) &temp);
-        // Retrieves the WordPosting, which has the hash table corresponding
-        // to the word
-        wp = kv.value;
-        HTKeyValue_t store = kv;
-        // Checks to see if the document is found in the HashTable
-        // of the current word
-        if (!HashTable_Find(wp->postings, temp->doc_id, &store)) {
-          // if not then remove
-          LLIterator_Remove(ll_it, &free);
-        } else {
-          // update rank and more on to next element
-          temp->rank += LinkedList_NumElements(kv.value);
-          LLIterator_Next(ll_it);
-        }
+      if (!LLIterator_IsValid(ll_it)) {
+        break;
+      }
+      // get current iterator element
+      SearchResult* temp = NULL;
+      LLIterator_Get(ll_it, (LLPayload_t*) &temp);
+      // Retrieves the WordPosting, which has the hash table corresponding
+      // to the word
+      wp =  (WordPostings*)kv.value;
+      HTKeyValue_t store = kv;
+      // Checks to see if the document is found in the HashTable
+      // of the current word
+      if (!HashTable_Find(wp->postings, temp->doc_id, &store)) {
+        // if not then remove
+        LLIterator_Remove(ll_it, &free);
+      } else {
+        // update rank and more on to next element
+        temp->rank += LinkedList_NumElements(store.value);
+        LLIterator_Next(ll_it);
       }
     }
     LLIterator_Free(ll_it);
-
 
     // We've finished processing this current query word.  If there are no
     // documents left in our result list, free retlist and return NULL.

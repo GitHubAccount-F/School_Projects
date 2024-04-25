@@ -114,8 +114,7 @@ DocID_t DocTable_Add(DocTable* table, char* doc_name) {
 
   kv.key = hashKey;
   kv.value = doc_id;
-  bool output2 = HashTable_Insert(table->name_to_id, kv, &old_kv);
-  Verify333(!output2);
+  HashTable_Insert(table->name_to_id, kv, &old_kv);
 
 
   return *doc_id;
