@@ -245,6 +245,7 @@ static void InsertContent(HashTable* tab, char* content) {
       }
       if (cur_ptr[index] == '\0') {
         // We don't change anything as we are at last element in string
+        AddWordPosition(tab, word_start, start);
         break;
       }
       cur_ptr[index] = '\0';  // cut off word using null terminator

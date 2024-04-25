@@ -266,7 +266,6 @@ static void HandleFile(char* file_path, DocTable** doc_table,
   it = HTIterator_Allocate(tab);
   Verify333(it != NULL);
   while (HTIterator_IsValid(it)) {
-
     // STEP 6.
     // Use HTIterator_Remove() to extract the next WordPositions structure out
     // of the hashtable. Then, use MemIndex_AddPostingList() to add the word,

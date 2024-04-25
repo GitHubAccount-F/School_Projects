@@ -11,7 +11,7 @@
 
 // Feature test macro for strtok_r (c.f., Linux Programming Interface p. 63)
 #define _XOPEN_SOURCE 600
-#define MAX_LENGTH 100  // Maximum length of input string
+#define MAX_LENGTH 512  // Maximum length of input string
 
 
 #include <stdio.h>
@@ -90,6 +90,7 @@ int main(int argc, char** argv) {
   }
 
   // Step 2, prompt the user for a query and convert it to a array of words
+  // MAXIMUM PROMPT SIZE = 512 bytes
   printf("Indexing '%s'\n", argv[1]);
   char input[MAX_LENGTH];
   char *result;
@@ -148,8 +149,8 @@ static void Usage(void) {
 
 void FreeQuery(char** query, int size) {
   for (int i = 0; i < size; i++) {
-     free(query[i]);  // free each word
-    }
+    free(query[i]);  // free each word
+  }
     free(query);  // free overall structure
 }
 

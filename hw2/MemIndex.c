@@ -115,14 +115,14 @@ void MemIndex_AddPostingList(MemIndex* index, char* word, DocID_t doc_id,
     //       mapping.
     //   (3) insert the the new WordPostings into the inverted index (ie, into
     //       the "index" table).
-      wp = (WordPostings*) malloc(sizeof(WordPostings));
-      wp->word = word;
-      // Create a hashtable with 1 bucket initially for the document
-      wp->postings = HashTable_Allocate(1);
-      // create key value to place into MemIndex table
-      mi_kv.key = key;
-      mi_kv.value = wp;
-      HashTable_Insert(index, mi_kv, NULL);
+    wp = (WordPostings*) malloc(sizeof(WordPostings));
+    wp->word = word;
+    // Create a hashtable with 1 bucket initially for the document
+    wp->postings = HashTable_Allocate(1);
+    // create key value to place into MemIndex table
+    mi_kv.key = key;
+    mi_kv.value = wp;
+    HashTable_Insert(index, mi_kv, NULL);
 
 
 
