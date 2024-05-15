@@ -11,11 +11,15 @@
 
 #include <cstdlib>    // for EXIT_SUCCESS, EXIT_FAILURE
 #include <iostream>   // for std::cout, std::cerr, etc.
+#include <sstream>
 
 #include "./QueryProcessor.h"
 
 using std::cerr;
 using std::endl;
+using std::cin;
+using std::cout;
+
 
 // Error usage message for the client to see
 // Arguments:
@@ -78,15 +82,54 @@ static void Usage(char* prog_name);
 // a stringstream gets the job done too.)
 //
 // Good luck, and write beautiful code!
+
+// Input: A stream, a vector<string> to store results
+// Output: Reads user input from console, and stores lowercase words inside query.
+// If bool is false, then error was detected, such as EOF
+bool ReadValue(vector<string>& query);
+
+
+// Input: A string
+// Output: Returns a lowercase version of the strings
+void toLower(string& word);
+
 int main(int argc, char** argv) {
   if (argc < 2) {
     Usage(argv[0]);
   }
+  vector<string> query;
+  vector<hw3::QueryProcessor::QueryResult> store;
+  list<string> index_list;
+  // store all index files
+  for(int i = 1; i < argc; i++) {
+    index_list.push_back(argv[i]);
+  }
+  hw3::QueryProcessor processor(index_list);
 
   // STEP 1:
   // Implement filesearchshell!
   // Probably want to write some helper methods ...
-  while (1) { }
+  while (1) { 
+    bool check = ReadValue(query);
+    if (!check) {
+      break;
+    }
+    store = processor.ProcessQuery(query);
+    printf("store length: %ld\n", store.size());
+    if (store.size() == 0) {
+      // no results
+      cout << "  [no results]" << endl; 
+    }
+    for (int i = 0; i < static_cast<int>(store.size()); i++) {
+      cout << "  " << store[i].document_name << " " << "(" << store[i].rank << ")" << endl;
+    }
+    // Empty out query
+    query.clear();
+
+
+
+
+  }
 
   return EXIT_SUCCESS;
 }
@@ -95,3 +138,50 @@ static void Usage(char* prog_name) {
   cerr << "Usage: " << prog_name << " [index files+]" << endl;
   exit(EXIT_FAILURE);
 }
+
+
+bool ReadValue(vector<string>& query) {
+  cout << "Enter query: " << endl;
+  string line;
+
+  // Try do to the conversion; check on cin.good() afterwards.
+  std::getline(cin, line);
+  if (!cin.good()) {
+    return false;
+  }
+  string word;
+
+  std::istringstream iss(line);
+
+  // read from input
+  while(iss >> word ) {
+    toLower(word);
+    query.push_back(word);
+  }
+  return true;
+}
+
+void toLower(string& word) {
+  for (char &c : word) {
+    c = std::tolower(c);
+  }
+
+  
+
+}
+
+/*
+char* store = word.c_str();
+  for (int i = 0; i < word.size(); i++) {
+    store[i] = std::toLower(store[i])
+  }
+  return std::str(store);
+*/
+
+
+/*
+    printf("\n\n\n\nQuery words");
+    for (int i = 0; i < static_cast<int>(query.size()); i++) {
+      cout << " " << query[i] << endl;
+    }
+    printf("\n\n\n\n\nnext iteration");*/

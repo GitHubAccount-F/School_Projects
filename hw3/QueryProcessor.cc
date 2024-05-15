@@ -72,18 +72,121 @@ typedef struct {
   int     rank;    // The rank of the result so far.
 } IdxQueryResult;
 
+///// Private Method //////
+// Goes through query, updating docidsList and ranks appropriately. 
+void ModifyDocIdsList(vector<IdxQueryResult>& container, const vector<string>& query, 
+  IndexTableReader* index, DocTableReader* read) {
+  // If query has more than 1 word
+  for (int j = 1; j < static_cast<int>(query.size()); j++) {
+    // next word
+    DocIDTableReader* hold = index->LookupWord(query[j]);
+    if (hold == nullptr) {
+      // index file doesn't contain word, exit function
+      container.clear();
+      break;
+    }
+    list<DocIDElementHeader> docIds = hold->GetDocIDList();
+    // docId list was empty, meaning index file didn't match query
+    if (docIds.size() == 0) {
+      delete hold;
+      container.clear();
+      break;
+    }
+    // Go through docIdList and verify each file is in the new docIds list
+    for (int k = 0; k < static_cast<int>(container.size()); k++) {
+      
+      bool test = 0;
+      for(DocIDElementHeader num : docIds) {
+        // checks if container, representing query, is in docId list
+        // if not, remove it as a potential result
+        if (num.doc_id == container[k].doc_id) {
+          test = 1;
+          container[k].rank += num.num_positions;
+          break;
+        }
+      }
+      // case where docid wasn't found in the new list of docids 
+      if (test == 0) {
+        container.erase(container.begin() + k);
+        k -= 1;
+      }
+    }
+    delete hold;
+  }
+}
+
 vector<QueryProcessor::QueryResult>
 QueryProcessor::ProcessQuery(const vector<string>& query) const {
   Verify333(query.size() > 0);
-
+  
   // STEP 1.
   // (the only step in this file)
+  // Process each word
+  // used to store each query result
   vector<QueryProcessor::QueryResult> final_result;
+  // Iterate per index file
+  for (int i = 0; i < static_cast<int>(index_list_.size()); i++) {
+    // for each index file
+    IndexTableReader* index = itr_array_[i];
+    DocTableReader* read = dtr_array_[i];
+    // containers
+    vector<IdxQueryResult> container;
 
+    
+    // Get initial query list, based off first word in query
+    DocIDTableReader* hold = index->LookupWord(query[0]);
+    if (hold == nullptr) {
+      // to next index file
+      continue;
+    }
+  
+    list<DocIDElementHeader> docIds = hold->GetDocIDList();
+    // check to make sure docIds isn't empty
+    if (docIds.size() == 0) {
+      delete hold;
+      continue;
+    }
+    // store initial docIds and rank, 
+    // we will reduce these later
+    for (DocIDElementHeader element : docIds) {
+      IdxQueryResult contain;
+      contain.doc_id = element.doc_id;
+      contain.rank = element.num_positions;
+      container.push_back(contain);
+    }
+    
+    // if query length is > 1
+    if (query.size() > 1) {
+      ModifyDocIdsList(container, query, index, read);
+    }
+
+    // we didn't find any files, if so continue
+    if (container.size() == 0) {
+      delete hold;
+      continue;
+    }
+    // We finished comparing total query to index file, build QueryResults for each
+    for (int i = 0; i < static_cast<int>(container.size()); i++) {
+      QueryResult temp;
+      // get rank
+      temp.rank = container[i].rank;
+      // get document name
+      read->LookupDocID(container[i].doc_id, &temp.document_name);
+      final_result.push_back(temp);
+    }
+    delete hold;
+    
+  }
 
   // Sort the final results.
   sort(final_result.begin(), final_result.end());
+
   return final_result;
 }
+
+
+
+
+
 
 }  // namespace hw3
