@@ -84,7 +84,8 @@ static void Usage(char* prog_name);
 // Good luck, and write beautiful code!
 
 // Input: A stream, a vector<string> to store results
-// Output: Reads user input from console, and stores lowercase words inside query.
+// Output: Reads user input from console, and stores lowercase
+// words inside query.
 // If bool is false, then error was detected, such as EOF
 bool ReadValue(vector<string>& query);
 
@@ -101,7 +102,7 @@ int main(int argc, char** argv) {
   vector<hw3::QueryProcessor::QueryResult> store;
   list<string> index_list;
   // store all index files
-  for(int i = 1; i < argc; i++) {
+  for (int i = 1; i < argc; i++) {
     index_list.push_back(argv[i]);
   }
   hw3::QueryProcessor processor(index_list);
@@ -109,26 +110,22 @@ int main(int argc, char** argv) {
   // STEP 1:
   // Implement filesearchshell!
   // Probably want to write some helper methods ...
-  while (1) { 
+  while (1) {
     bool check = ReadValue(query);
     if (!check) {
       break;
     }
     store = processor.ProcessQuery(query);
-    printf("store length: %ld\n", store.size());
     if (store.size() == 0) {
       // no results
-      cout << "  [no results]" << endl; 
+      cout << "  [no results]" << endl;
     }
     for (int i = 0; i < static_cast<int>(store.size()); i++) {
-      cout << "  " << store[i].document_name << " " << "(" << store[i].rank << ")" << endl;
+      cout << "  " << store[i].document_name << " "
+        << "(" << store[i].rank << ")" << endl;
     }
     // Empty out query
     query.clear();
-
-
-
-
   }
 
   return EXIT_SUCCESS;
@@ -154,7 +151,7 @@ bool ReadValue(vector<string>& query) {
   std::istringstream iss(line);
 
   // read from input
-  while(iss >> word ) {
+  while (iss >> word) {
     toLower(word);
     query.push_back(word);
   }
@@ -165,23 +162,4 @@ void toLower(string& word) {
   for (char &c : word) {
     c = std::tolower(c);
   }
-
-  
-
 }
-
-/*
-char* store = word.c_str();
-  for (int i = 0; i < word.size(); i++) {
-    store[i] = std::toLower(store[i])
-  }
-  return std::str(store);
-*/
-
-
-/*
-    printf("\n\n\n\nQuery words");
-    for (int i = 0; i < static_cast<int>(query.size()); i++) {
-      cout << " " << query[i] << endl;
-    }
-    printf("\n\n\n\n\nnext iteration");*/

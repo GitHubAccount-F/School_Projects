@@ -73,9 +73,18 @@ typedef struct {
 } IdxQueryResult;
 
 ///// Private Method //////
-// Goes through query, updating docidsList and ranks appropriately. 
-void ModifyDocIdsList(vector<IdxQueryResult>& container, const vector<string>& query, 
-  IndexTableReader* index, DocTableReader* read) {
+/*
+Input - container: Stores query results for each index file
+  query: Query we are using to parse file
+  index: IndexTableReader associated with index file
+  read: DocTableReader associated with index file
+Output - Goes through query, updating container appropriately. Removes elements
+inside container if it doesn't satisfy the query
+*/
+void ModifyDocIdsList(vector<IdxQueryResult>& container,
+                      const vector<string>& query,
+                      IndexTableReader* index,
+                      DocTableReader* read) {
   // If query has more than 1 word
   for (int j = 1; j < static_cast<int>(query.size()); j++) {
     // next word
@@ -88,24 +97,24 @@ void ModifyDocIdsList(vector<IdxQueryResult>& container, const vector<string>& q
     list<DocIDElementHeader> docIds = hold->GetDocIDList();
     // docId list was empty, meaning index file didn't match query
     if (docIds.size() == 0) {
+      // exit function
       delete hold;
       container.clear();
       break;
     }
     // Go through docIdList and verify each file is in the new docIds list
     for (int k = 0; k < static_cast<int>(container.size()); k++) {
-      
       bool test = 0;
-      for(DocIDElementHeader num : docIds) {
+      for (DocIDElementHeader num : docIds) {
         // checks if container, representing query, is in docId list
-        // if not, remove it as a potential result
+        // if found, update rank
         if (num.doc_id == container[k].doc_id) {
           test = 1;
           container[k].rank += num.num_positions;
           break;
         }
       }
-      // case where docid wasn't found in the new list of docids 
+      // case where docid wasn't found in the new list of docids
       if (test == 0) {
         container.erase(container.begin() + k);
         k -= 1;
@@ -118,7 +127,7 @@ void ModifyDocIdsList(vector<IdxQueryResult>& container, const vector<string>& q
 vector<QueryProcessor::QueryResult>
 QueryProcessor::ProcessQuery(const vector<string>& query) const {
   Verify333(query.size() > 0);
-  
+
   // STEP 1.
   // (the only step in this file)
   // Process each word
@@ -132,29 +141,29 @@ QueryProcessor::ProcessQuery(const vector<string>& query) const {
     // containers
     vector<IdxQueryResult> container;
 
-    
+
     // Get initial query list, based off first word in query
     DocIDTableReader* hold = index->LookupWord(query[0]);
     if (hold == nullptr) {
-      // to next index file
+      // to next index file if word search failed
       continue;
     }
-  
+
     list<DocIDElementHeader> docIds = hold->GetDocIDList();
     // check to make sure docIds isn't empty
     if (docIds.size() == 0) {
+      // to next index file
       delete hold;
       continue;
     }
-    // store initial docIds and rank, 
-    // we will reduce these later
+    // store initial docIds and rank
     for (DocIDElementHeader element : docIds) {
       IdxQueryResult contain;
       contain.doc_id = element.doc_id;
       contain.rank = element.num_positions;
       container.push_back(contain);
     }
-    
+
     // if query length is > 1
     if (query.size() > 1) {
       ModifyDocIdsList(container, query, index, read);
@@ -165,7 +174,7 @@ QueryProcessor::ProcessQuery(const vector<string>& query) const {
       delete hold;
       continue;
     }
-    // We finished comparing total query to index file, build QueryResults for each
+    // We finished comparing total query to index file, build QueryResults
     for (int i = 0; i < static_cast<int>(container.size()); i++) {
       QueryResult temp;
       // get rank
@@ -175,7 +184,6 @@ QueryProcessor::ProcessQuery(const vector<string>& query) const {
       final_result.push_back(temp);
     }
     delete hold;
-    
   }
 
   // Sort the final results.

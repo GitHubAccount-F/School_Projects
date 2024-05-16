@@ -95,10 +95,10 @@ DocIDTableReader* IndexTableReader::LookupWord(const string& word) const {
       //
       // return the new'd (DocIDTableReader*) to the caller.
       IndexFileOffset_t docID_table_offset =
-          offset + sizeof(WordPostingsHeader) + header.word_bytes;
+        offset + sizeof(WordPostingsHeader) + header.word_bytes;
       DocIDTableReader* ditr =
-          new DocIDTableReader(FileDup(file_), docID_table_offset);
-     
+        new DocIDTableReader(FileDup(file_), docID_table_offset);
+
       return ditr;
     }
   }

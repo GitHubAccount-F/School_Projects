@@ -74,7 +74,6 @@ FileIndexReader::FileIndexReader(const string& file_name,
       // this step. Remember that file_ is now unbuffered, so care needs
       // to be put into how the file is sequentially read
       size_t read = fread(buf, sizeof(uint8_t), kBufSize, file_);
-      //printf("read %ld\n", read);
       Verify333(read > 0);
       for (int i = 0; i < static_cast<int>(read); i++) {
         crc_obj.FoldByteIntoCRC(buf[i]);

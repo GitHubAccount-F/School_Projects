@@ -63,7 +63,6 @@ HashTableReader::LookupElementPositions(HTKey_t hash_key) const {
   size_t check2 = fread(&bucket_rec, sizeof(BucketRecord), 1, file_);
   Verify333(check2 == 1);
   bucket_rec.ToHostFormat();
-  
 
 
   // This will be our returned list of element positions.
@@ -75,7 +74,7 @@ HashTableReader::LookupElementPositions(HTKey_t hash_key) const {
   // correct order (i.e., append to the end of the list).
   int check3 = fseek(file_, bucket_rec.position, SEEK_SET);
   Verify333(check3 == 0);
-  for(int i = 0; i < bucket_rec.chain_num_elements; i++) {
+  for (int i = 0; i < bucket_rec.chain_num_elements; i++) {
     ElementPositionRecord temp;
     size_t check4 = fread(&temp, sizeof(ElementPositionRecord), 1, file_);
     temp.ToHostFormat();

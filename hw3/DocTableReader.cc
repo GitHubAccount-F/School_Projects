@@ -49,7 +49,8 @@ bool DocTableReader::LookupDocID(const DocID_t& doc_id,
     DoctableElementHeader curr_header;
     int check = fseek(file_, curr_el_offset, SEEK_SET);
     Verify333(check == 0);
-    size_t check2 = fread(&curr_header, sizeof(DoctableElementHeader), 1, file_);
+    size_t check2 =
+      fread(&curr_header, sizeof(DoctableElementHeader), 1, file_);
     Verify333(check2 == 1);
     curr_header.ToHostFormat();
 
