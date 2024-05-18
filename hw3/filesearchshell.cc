@@ -87,12 +87,12 @@ static void Usage(char* prog_name);
 // Output: Reads user input from console, and stores lowercase
 // words inside query.
 // If bool is false, then error was detected, such as EOF
-bool ReadValue(vector<string>& query);
+bool ReadValue(vector<string>* query);
 
 
 // Input: A string
 // Output: Returns a lowercase version of the strings
-void toLower(string& word);
+void toLower(string* word);
 
 int main(int argc, char** argv) {
   if (argc < 2) {
@@ -111,7 +111,7 @@ int main(int argc, char** argv) {
   // Implement filesearchshell!
   // Probably want to write some helper methods ...
   while (1) {
-    bool check = ReadValue(query);
+    bool check = ReadValue(&query);
     if (!check) {
       break;
     }
@@ -137,7 +137,8 @@ static void Usage(char* prog_name) {
 }
 
 
-bool ReadValue(vector<string>& query) {
+bool ReadValue(vector<string>* query) {
+  vector<string>& refer = *query;
   cout << "Enter query: " << endl;
   string line;
 
@@ -152,14 +153,15 @@ bool ReadValue(vector<string>& query) {
 
   // read from input
   while (iss >> word) {
-    toLower(word);
-    query.push_back(word);
+    toLower(&word);
+    refer.push_back(word);
   }
   return true;
 }
 
-void toLower(string& word) {
-  for (char &c : word) {
+void toLower(string* word) {
+  string& refer = *word;
+  for (char &c : refer) {
     c = std::tolower(c);
   }
 }

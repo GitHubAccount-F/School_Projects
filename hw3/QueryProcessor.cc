@@ -81,17 +81,18 @@ Input - container: Stores query results for each index file
 Output - Goes through query, updating container appropriately. Removes elements
 inside container if it doesn't satisfy the query
 */
-void ModifyDocIdsList(vector<IdxQueryResult>& container,
+void ModifyDocIdsList(vector<IdxQueryResult>* container,
                       const vector<string>& query,
                       IndexTableReader* index,
                       DocTableReader* read) {
+  vector<IdxQueryResult>& refer = *container;
   // If query has more than 1 word
   for (int j = 1; j < static_cast<int>(query.size()); j++) {
     // next word
     DocIDTableReader* hold = index->LookupWord(query[j]);
     if (hold == nullptr) {
       // index file doesn't contain word, exit function
-      container.clear();
+      refer.clear();
       break;
     }
     list<DocIDElementHeader> docIds = hold->GetDocIDList();
@@ -99,24 +100,24 @@ void ModifyDocIdsList(vector<IdxQueryResult>& container,
     if (docIds.size() == 0) {
       // exit function
       delete hold;
-      container.clear();
+      refer.clear();
       break;
     }
     // Go through docIdList and verify each file is in the new docIds list
-    for (int k = 0; k < static_cast<int>(container.size()); k++) {
+    for (int k = 0; k < static_cast<int>(refer.size()); k++) {
       bool test = 0;
       for (DocIDElementHeader num : docIds) {
         // checks if container, representing query, is in docId list
         // if found, update rank
-        if (num.doc_id == container[k].doc_id) {
+        if (num.doc_id == refer[k].doc_id) {
           test = 1;
-          container[k].rank += num.num_positions;
+          refer[k].rank += num.num_positions;
           break;
         }
       }
       // case where docid wasn't found in the new list of docids
       if (test == 0) {
-        container.erase(container.begin() + k);
+        refer.erase(refer.begin() + k);
         k -= 1;
       }
     }
@@ -166,7 +167,7 @@ QueryProcessor::ProcessQuery(const vector<string>& query) const {
 
     // if query length is > 1
     if (query.size() > 1) {
-      ModifyDocIdsList(container, query, index, read);
+      ModifyDocIdsList(&container, query, index, read);
     }
 
     // we didn't find any files, if so continue
