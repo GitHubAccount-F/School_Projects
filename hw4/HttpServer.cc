@@ -133,9 +133,22 @@ static void HttpServer_ThrFn(ThreadPool::Task* t) {
   // creating/destroying the same connection repeatedly.
 
   // STEP 1:
-  bool done = false;
-  while (!done) {
-    done = true;  // you may need to change this return value
+  // bool done = false;
+  HttpConnection connect(hst->client_fd);
+  while (true) {
+    HttpRequest request;
+    bool check = connect.GetNextRequest(&request);
+    if (!check || request.GetHeaderValue("connect") == "close") {
+      break;
+    }
+    HttpResponse output = ProcessRequest(request,
+                                        hst->base_dir,
+                                        *(hst->indices));
+    bool check2 = connect.WriteResponse(output);
+    if (!check2) {
+      // error
+      break;
+    }
   }
 }
 
@@ -178,18 +191,58 @@ static HttpResponse ProcessFileRequest(const string& uri,
   //
   // be sure to set the response code, protocol, and message
   // in the HttpResponse as well.
-  string file_name = "";
-
-  // STEP 2:
-
+  URLParser parser;
+  parser.Parse(uri);
+  string file_name = parser.path().substr(8);
+  // removes /static/
+  FileReader read(base_dir, file_name);
+  string contents;
+  int check = read.ReadFile(&contents);
+  if (check) {
+    ret.AppendToBody(contents);
+    // get file suffix
+    string suffix = file_name.substr(file_name.length() - 3);
+    // if suffix = tml, it must correspond to html
+    if (suffix == "tml" || suffix == "htm") {
+      ret.set_content_type("text/html");
+    }
+    // peg represents jpg
+    if (suffix == "peg" || suffix == "jpg") {
+      ret.set_content_type("image/jpeg");
+    }
+    if (suffix == "png") {
+      ret.set_content_type("image/png");
+    }
+    if (suffix == "txt") {
+      ret.set_content_type("text/plain");
+    }
+    if (suffix == ".js") {
+      ret.set_content_type("application/javascript");
+    }
+    if (suffix == "css") {
+      ret.set_content_type("text/css");
+    }
+    if (suffix == "xml") {
+      ret.set_content_type("application/xml");
+    }
+    if (suffix == "gif") {
+      ret.set_content_type("image/gif");
+    }
+    ret.set_response_code(static_cast<uint16_t>(200));
+    ret.set_protocol("HTTP/1.1");
+    ret.set_message("OK");
+    return ret;
+  }
 
   // If you couldn't find the file, return an HTTP 404 error.
+  // remove /static/
   ret.set_protocol("HTTP/1.1");
   ret.set_response_code(404);
   ret.set_message("Not Found");
   ret.AppendToBody("<html><body>Couldn't find file \""
                    + EscapeHtml(file_name)
                    + "\"</body></html>\n");
+
   return ret;
 }
 
@@ -219,8 +272,64 @@ static HttpResponse ProcessQueryRequest(const string& uri,
   //    tags!)
 
   // STEP 3:
+  string query;
+  vector<string> breakApart;
+  string html;  // used to store code
+  URLParser parser;
+  parser.Parse(uri);
+  // Initialize Query Processor
+  hw3::QueryProcessor process(indices);
+
+  // get query
+  map<string, string> map = parser.args();
+  auto it = map.find("terms");
+  string code(kThreegleStr);
+  html.append(code + "</p>");
+  // checks if we are either loading the page, or searching for something
+  if (it != map.end()) {  // we found a query
+    query += map.at("terms");
+    query = EscapeHtml(query);
+    boost::trim(query);
+    // split query words
+    boost::split(breakApart, query, boost::is_any_of(" "));
+    // lowercase query words
+    for (int i = 0; i < static_cast<int>(breakApart.size()); i++) {
+      boost::algorithm::to_lower(breakApart[i]);
+    }
+
+    // Search through files to process query
+    vector<hw3::QueryProcessor::QueryResult> result =
+      process.ProcessQuery(breakApart);
+    if (result.size() == 0) {  // no query results found
+      html.append("<p><br>No results found for <b>");
+    } else {  // results were found
+      stringstream ss;
+      ss << result.size();
+      html.append("<p><br>" + ss.str() + " results found for <b>");
+    }
+      for (int k = 0; k < static_cast<int>(breakApart.size()); k++) {
+        // appends query words to html
+        html.append(" " + breakApart[k]);
+      }
+      html.append("</b></p><p></p><ul>");
+      // print out files
+      for (int i = 0; i < static_cast<int>(result.size()); i++) {
+        stringstream ranks;
+        ranks << result[i].rank;
+        html.append("<li> <a href=\"/static/" + result[i].document_name +
+          "\">" + result[i].document_name + "</a>");
+        html.append(" [" + ranks.str() + "]<br></li>");
+      }
+      html.append("</ul>");
+  }
+  html.append("</body></html>");
+  ret.AppendToBody(html);
+  ret.set_response_code(static_cast<uint16_t>(200));
+  ret.set_protocol("HTTP/1.1");
+  ret.set_message("OK");
 
   return ret;
 }
+
 
 }  // namespace hw4

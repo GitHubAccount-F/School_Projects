@@ -12,6 +12,7 @@
 // This file contains a number of HTTP and HTML parsing routines
 // that come in useful throughput the assignment.
 
+
 #include <arpa/inet.h>
 #include <errno.h>
 #include <limits.h>
@@ -53,9 +54,25 @@ bool IsPathSafe(const string& root_dir, const string& test_file) {
   // path of a file.)
 
   // STEP 1
+  char absolutePathOne[PATH_MAX];
+  char absolutePathTwo[PATH_MAX];
+  char* abs_path_one = realpath(test_file.c_str(), absolutePathOne);
+  char* abs_path_two = realpath(root_dir.c_str(), absolutePathTwo);
 
-
-  return true;  // you may want to change this return value
+  if (abs_path_one == nullptr || abs_path_two == nullptr)  {
+    return false;
+  }
+  // check if it contains root_dir
+  string root(absolutePathTwo);
+  string path(absolutePathOne);
+  if (root.back() != '/') {
+    root += "/";
+  }
+  size_t pos = path.find(root);
+  if (pos == std::string::npos) {
+    return false;
+  }
+  return true;
 }
 
 string EscapeHtml(const string& from) {
@@ -70,6 +87,26 @@ string EscapeHtml(const string& from) {
 
   // STEP 2
 
+  string one("<");
+  string two("&lt;");
+
+  string three("&");
+  string four("&amp;");
+
+  string five(">");
+  string six("&gt;");
+
+  string seven("\"");
+  string eight("&quot;");
+
+  string nine("\'");
+  string ten("&apos;");
+
+  boost::replace_all(ret, three, four);
+  boost::replace_all(ret, one, two);
+  boost::replace_all(ret, five, six);
+  boost::replace_all(ret, seven, eight);
+  boost::replace_all(ret, nine, ten);
 
   return ret;
 }

@@ -47,9 +47,51 @@ bool HttpConnection::GetNextRequest(HttpRequest* const request) {
   // next time the caller invokes GetNextRequest()!
 
   // STEP 1:
+  // Buffer contains a request to process/return
 
+  size_t position;
+  if ((position = buffer_.find(kHeaderEnd)) != std::string::npos) {
+    *request = ParseRequest(buffer_.substr(0, position));
+    buffer_.erase(0, position + kHeaderEndLen);
+  } else {  // Buffer doesn't contain a request yet
+    string add;
+    char buf[1024];
+    int size = 1;
 
-  return false;  // you may need to change this return value
+    while (true) {
+      size = WrappedRead(fd_, reinterpret_cast<unsigned char *>(buf), 1024);
+      // invalid read
+      if (size == -1) {
+        return false;
+      }
+      string output(buf, size);
+      // connection drop
+      if (size == 0) {
+        break;
+      }
+      add += output;
+      // read fewer than expected, break
+      if (size < 1024) {
+        break;
+      }
+    }
+    buffer_ += add;
+    // retrieve request
+    position = buffer_.find(kHeaderEnd);
+    if (position != std::string::npos) {
+      *request = ParseRequest(buffer_.substr(0, position));
+      buffer_.erase(0, position + kHeaderEndLen);
+    } else {
+      if (buffer_.size() > 0) {
+        // attempts to read what's currently in buffer
+        *request = ParseRequest(buffer_);
+        buffer_.clear();
+      } else {
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 bool HttpConnection::WriteResponse(const HttpResponse& response) const {
@@ -61,6 +103,7 @@ bool HttpConnection::WriteResponse(const HttpResponse& response) const {
     return false;
   return true;
 }
+
 
 HttpRequest HttpConnection::ParseRequest(const string& request) const {
   HttpRequest req("/");  // by default, get "/".
@@ -81,10 +124,43 @@ HttpRequest HttpConnection::ParseRequest(const string& request) const {
   //
   // Note: If a header is malformed, skip that line.
 
+
   // STEP 2:
+  vector<string> subs;
 
+  // Split the string
+  boost::split(subs, request, boost::is_any_of("\r\n"));
+  vector<string> breakApart;
 
+  string lineOne = subs[0];
+  boost::trim(lineOne);
+
+  boost::split(breakApart, lineOne, boost::is_any_of(" "));
+  boost::trim(breakApart[1]);
+  req.set_uri(breakApart[1]);
+
+  // work on headers
+  string replace(":");
+  string replaceWith("");
+  for (int i = 1; i < static_cast<int>(subs.size()); i++) {
+    string header = subs[i];
+    boost::trim(header);
+    boost::split(breakApart, header, boost::is_any_of(" "));
+    if (breakApart.size() != 2) {
+      // malformed header
+      continue;
+    }
+    // remove : in headers
+    boost::replace_all(breakApart[0], replace, replaceWith);
+
+    // lowercase
+    boost::algorithm::to_lower(breakApart[1]);
+    boost::algorithm::to_lower(breakApart[0]);
+
+    req.AddHeader(breakApart[0], breakApart[1]);
+  }
   return req;
 }
+
 
 }  // namespace hw4

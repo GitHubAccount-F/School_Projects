@@ -46,7 +46,21 @@ bool FileReader::ReadFile(string* const contents) {
 
   // STEP 1:
 
-
+  if (!IsPathSafe(basedir_, full_file)) {
+    return false;
+  }
+  int size = -1;
+  char* output = ReadFileToString(full_file.c_str(), &size);
+  if (output == NULL) {
+    return false;
+  }
+  if (size < 0) {
+    free(output);
+    return false;
+  }
+  string result(output, size);
+  *contents = result;
+  free(output);
   return true;
 }
 

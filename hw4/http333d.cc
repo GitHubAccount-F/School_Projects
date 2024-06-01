@@ -101,5 +101,23 @@ static void GetPortAndPath(int argc,
   // - You have at least 1 index, and all indices are readable files
 
   // STEP 1:
-}
+  // Retrieves port
+  if (argc < 2) {
+    Usage(argv[0]);
+  }
+  *port = static_cast<uint16_t>(atoi(argv[1]));
 
+  // retrieves path
+  string staticfiles_directory(argv[2]);
+  *path = staticfiles_directory;
+
+  // retrieves index files
+  if (argc > 3) {
+    list<string> output;
+    for (int i = 3; i < argc; i++) {
+      string index(argv[i]);
+      output.push_back(index);
+    }
+    *indices = output;
+  }
+}
