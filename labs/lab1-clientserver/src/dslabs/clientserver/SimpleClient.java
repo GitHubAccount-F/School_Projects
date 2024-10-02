@@ -3,6 +3,8 @@ package dslabs.clientserver;
 import static dslabs.clientserver.ClientTimer.CLIENT_RETRY_MILLIS;
 
 import com.google.common.base.Objects;
+import dslabs.atmostonce.AMOCommand;
+import dslabs.atmostonce.AMOResult;
 import dslabs.framework.Address;
 import dslabs.framework.Client;
 import dslabs.framework.Command;
@@ -22,8 +24,10 @@ class SimpleClient extends Node implements Client {
   private final Address serverAddress;
 
   // Your code here...
+  // ????????????????????
   private Request request;
   private Reply reply;
+  private int seqNum;
 
   /* -----------------------------------------------------------------------------------------------
    *  Construction and Initialization
@@ -31,6 +35,7 @@ class SimpleClient extends Node implements Client {
   public SimpleClient(Address address, Address serverAddress) {
     super(address);
     this.serverAddress = serverAddress;
+    seqNum = 0;
   }
 
   @Override
@@ -48,8 +53,8 @@ class SimpleClient extends Node implements Client {
       //throw new IllegalArgumentException();
     //}
 
-
-    request = new Request(command, command.hashCode());
+    AMOCommand com = new AMOCommand(command, seqNum++, address());
+    request = new Request(com);
     reply = null;
 
     this.send(request, serverAddress);
@@ -59,7 +64,7 @@ class SimpleClient extends Node implements Client {
 
   @Override
   public synchronized boolean hasResult() {
-    // Your code here...
+    // Your code here..
     return reply != null;
   }
 
@@ -70,7 +75,7 @@ class SimpleClient extends Node implements Client {
       this.wait();
     }
 
-    return reply.result();
+    return reply.result().result();
   }
 
   /* -----------------------------------------------------------------------------------------------
@@ -78,7 +83,7 @@ class SimpleClient extends Node implements Client {
    * ---------------------------------------------------------------------------------------------*/
   private synchronized void handleReply(Reply m, Address sender) {
     // Your code here...
-    if (Objects.equal(request.sequenceNum(), m.sequenceNum())) {
+    if (Objects.equal(request.command().sequenceNum(), m.result().sequenceNum())) {
       reply = m;
       notify();
     }
