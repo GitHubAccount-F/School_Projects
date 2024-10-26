@@ -11,6 +11,8 @@ import dslabs.framework.Application;
 import dslabs.framework.Node;
 import dslabs.framework.Result;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.Queue;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
@@ -24,7 +26,12 @@ class PBServer extends Node {
   private boolean stateReceived; // starts false, made true when this server receives state from another server, and once true prevents this server from executing another state transfer received!
   private boolean stateTransferInProgress; // false by default, turns true when this server is sending its state to another server, while true this server doesn't accept PBClient requests
   private View view;
-  private Application application;
+  private AMOApplication application;
+
+  //private Request lastReq;
+  //private Queue<Request> lock;
+  private Request currentRequest;
+  private boolean currentBoolean;
 
   /* -----------------------------------------------------------------------------------------------
    *  Construction and Initialization
@@ -38,7 +45,10 @@ class PBServer extends Node {
     this.view = null;
     this.stateReceived = false;
     this.stateTransferInProgress = false;
-   // this.stopTakingRequest = false;
+    //lastReq = null;
+    //lock = new LinkedList<>();
+    currentRequest = null;
+    currentBoolean = false;
   }
 
   @Override
@@ -54,35 +64,41 @@ class PBServer extends Node {
   private void handleRequest(Request m, Address sender) {
     if (this.view != null && this.view.primary() == this.address() && this.view.viewNum() == m.viewNum() &&
         !this.stateTransferInProgress) {
-      // LOGIC HERE: Check if already executed this message, if so send stored result, otherwise forward request to backup --> execute --> store result --> send result as reply
-      if (this.view.backup() != null) { // checks to see if backup is null
-        ForwardRequest x = new ForwardRequest(m);
-        send(x, this.view.backup());
-      } else { // if null, execute only for primary
-        Result r = application.execute(m.amoCommand());
-        Reply rep = new Reply((AMOResult) r, m.viewNum());
-        send(rep, sender);
+      // if we already executed the request, then execute it on primary and send back result
+      // If we are already processing a request, ignore new ones
+
+      if (application.alreadyExecuted(m.amoCommand())) {
+        AMOResult r = application.execute(m.amoCommand());
+        send(new Reply(r, m.viewNum()), sender);
+      } else if (this.currentRequest == null || (this.currentRequest.equals(m) /*!currentBoolean*/)) {
+        currentRequest = m;
+        //currentBoolean = false;
+        if (this.view.backup() != null) { // checks to see if backup is null
+          // send forward request to the backup
+          send(new ForwardRequest(m), this.view.backup());
+        } else { // if no backup, execute only on primary
+          AMOResult r = application.execute(m.amoCommand());
+          send(new Reply(r, m.viewNum()), sender);
+          currentRequest = null;
+        }
       }
-      // send to backup with forward request, handle forward reply
     }
-    // nothing happens outside the above if statement; sender's ClientTimer will fire triggering it to resend / call GetView so it will update to the right server to send to if needed
   }
 
+
+// amo app check if request was already executed
+  // if not , handle one
   private void handleViewReply(ViewReply m, Address sender) {
-    if (this.view == null) { // start of server
-      this.view = m.view();
-    } else if (m.view().viewNum() > this.view.viewNum()) {
+    if (this.view == null
+        || m.view().viewNum() > this.view.viewNum()) { // we receive a higher view number
       this.stateReceived = false;
+      //lock = null;
       this.stateTransferInProgress = false;
       this.view = m.view();
-      //this.stopTakingRequest = (this.view.primary() != this.address());
-      if (this.view.backup() != null) { // handle state transfer logic here
-        // if you are the primary
-        if (this.view.primary() == this.address()) {
-          stateTransferInProgress = true;
-          send(new StateTransfer(application, this.view), this.view.backup());
-          this.set(new StateTransferTimer(), STATE_TRANSFER_RETRY_MILLIS);
-        }
+      if (this.view.backup() != null && this.view.primary() == this.address()) {
+        stateTransferInProgress = true;
+        send(new StateTransfer(application, this.view), this.view.backup());
+        this.set(new StateTransferTimer(), STATE_TRANSFER_RETRY_MILLIS);
       }
     }
   }
@@ -94,7 +110,8 @@ class PBServer extends Node {
   private void handleForwardRequest(ForwardRequest m, Address sender) {
     if (this.view.backup() == this.address() &&
         m.request().viewNum() == this.view.viewNum() &&
-        this.application != null && stateReceived) {
+        this.application != null &&
+        stateReceived) {
       Result r = application.execute(m.request().amoCommand());  // maybe compare to primary result
       ForwardReply rep = new ForwardReply(true, m);
       send(rep, sender);
@@ -103,13 +120,12 @@ class PBServer extends Node {
 
   // For the primary
   private void handleForwardReply(ForwardReply m, Address sender) {
-    if (this.view.primary() == this.address() && m.success() && sender == this.view.backup()
-    && !this.stateTransferInProgress) {
-      Result r = application.execute(m.forwardRequest().request().amoCommand());
-      Request y = m.forwardRequest().request();
-      Reply rep = new Reply((AMOResult) r, y.viewNum());
-      // send to client
-      send(rep, y.amoCommand().clientAddress());
+    if (this.view.primary() == this.address() && sender == this.view.backup()
+        && (this.currentRequest != null &&
+        this.currentRequest.equals(m.forwardRequest().request()))) {
+      AMOResult r = application.execute(m.forwardRequest().request().amoCommand());
+      send(new Reply(r,currentRequest.viewNum()), currentRequest.amoCommand().clientAddress());
+      currentRequest = null;
     }
   }
 
@@ -141,19 +157,20 @@ class PBServer extends Node {
 
   private void handleStateTransfer(StateTransfer state, Address sender) {
     if ((this.view == null || (this.view.viewNum() <= state.view().viewNum()))) {
+      // here
       if (!stateReceived) {
         this.application = state.application();
         this.view = state.view();
+        //this.mechanism = state.mechanism();
         stateReceived = true;
       }
       StateTransferAck ack = new StateTransferAck(true, this.view);
       send(ack, sender);
     }
-
   }
 
   private void handleStateTransferAck(StateTransferAck ack, Address sender) {
-    if (sender == this.view.backup()) {
+    if (sender == this.view.backup() && this.stateTransferInProgress) {
       if(ack.success()) {
         stateTransferInProgress = false;
       }
@@ -162,3 +179,11 @@ class PBServer extends Node {
   }
 
 }
+
+/*
+Look at incoming req, make sure it was not old request
+Locking mech. Store a request
+
+
+
+ */

@@ -5,10 +5,7 @@ import dslabs.atmostonce.AMOCommand;
 import dslabs.atmostonce.AMOResult;
 import dslabs.framework.Address;
 import dslabs.framework.Application;
-import dslabs.framework.Command;
 import dslabs.framework.Message;
-import dslabs.framework.Result;
-import dslabs.kvstore.KVStore;
 import lombok.Data;
 
 /* -----------------------------------------------------------------------------------------------
@@ -59,8 +56,10 @@ class ForwardReply implements Message {
 
 @Data
 class StateTransfer implements Message {
-  private final Application application;
+  private final AMOApplication application;
   private final View view;
+  //private Request mechanism;
+  //private final Request lock;
 }
 
 @Data

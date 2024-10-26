@@ -84,12 +84,12 @@ class PBClient extends Node implements Client {
     //System.out.println("\nhandleReply +" + m + "sender = " + sender);
     // Your code here...
     if (m.amoResult().sequenceNum() == this.sequenceNum && sender == this.view.primary()) {
-
       this.result = m.amoResult().result();
       ////System.out.println("result +" + this.result);
+      this.sequenceNum++;
       this.notify();
 
-      this.sequenceNum++;
+
     }
   }
 
@@ -99,7 +99,9 @@ class PBClient extends Node implements Client {
     if (this.view == null) {
       ////System.out.println("a   ");
       this.view = m.view();
-      sendCommand(command);
+      if (command != null) {
+        sendCommand(command);
+      }
     } else if (m.view().viewNum() > this.view.viewNum()) {
       ////System.out.println("b   ");
       this.view = m.view();
