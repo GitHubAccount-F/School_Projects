@@ -163,7 +163,9 @@ class PBServer extends Node {
     if (this.view == null) {
       this.send(new Ping(0), this.viewServer);
     } else {
-      this.send(new Ping(this.view.viewNum()), this.viewServer);
+      if (!(this.view.primary() == this.address() && this.stateTransferInProgress)) {
+        this.send(new Ping(this.view.viewNum()), this.viewServer);
+      }
     }
     this.set(t, PING_MILLIS);
   }
