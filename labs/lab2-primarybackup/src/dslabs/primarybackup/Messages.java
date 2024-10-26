@@ -58,8 +58,6 @@ class ForwardReply implements Message {
 class StateTransfer implements Message {
   private final AMOApplication application;
   private final View view;
-  //private Request mechanism;
-  //private final Request lock;
 }
 
 @Data

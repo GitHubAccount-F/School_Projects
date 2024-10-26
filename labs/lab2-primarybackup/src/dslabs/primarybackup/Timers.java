@@ -25,7 +25,8 @@ final class ClientTimer implements Timer {
 
 @Data
 final class StateTransferTimer implements Timer {
-  static final int STATE_TRANSFER_RETRY_MILLIS = 100;
+  static final int STATE_TRANSFER_RETRY_MILLIS = 50;
+  //private final int viewNum;
 }
 
 @Data
