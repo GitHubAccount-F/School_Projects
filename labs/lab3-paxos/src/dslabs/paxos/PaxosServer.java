@@ -4,6 +4,8 @@ import dslabs.framework.Address;
 import dslabs.framework.Application;
 import dslabs.framework.Command;
 import dslabs.framework.Node;
+import java.util.List;
+import java.util.Map;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
@@ -14,7 +16,51 @@ public class PaxosServer extends Node {
   private final Address[] servers;
 
   // Your code here...
+  // Replica state
+  private Map<Integer, LogEntry> log;
+  private int slot_out;
+  private int slot_in;
+  private List<Integer> latest_Executed_List;
 
+
+  // Acceptor state
+  private Ballot ballot;
+  private List<Pvalue> accepted_Pvalues;
+
+  // Leader state
+  private boolean active;
+  private Ballot ballot_num;
+  private Map<Pvalue, List<Address>> proposals;
+
+
+
+
+
+
+  class LogEntry {
+
+    private Ballot ballot;
+    private PaxosLogSlotStatus status;
+    private Command command;
+
+    LogEntry(Ballot ballot, PaxosLogSlotStatus status, Command command) {
+      this.ballot = ballot;
+      this.status = status;
+      this.command = command;
+    }
+
+    public Ballot getLogBallot() {
+      return ballot;
+    }
+
+    public PaxosLogSlotStatus getLogStatus() {
+      return status;
+    }
+
+    public Command getLogCommand() {
+      return command;
+    }
+  }
   /* -----------------------------------------------------------------------------------------------
    *  Construction and Initialization
    * ---------------------------------------------------------------------------------------------*/
@@ -28,6 +74,10 @@ public class PaxosServer extends Node {
   @Override
   public void init() {
     // Your code here...
+    // if this.address == server0(or server1 depending on which is the first server)
+      /*
+      we set active to true,
+       */
   }
 
   /* -----------------------------------------------------------------------------------------------
