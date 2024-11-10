@@ -20,7 +20,8 @@ public final class PaxosClient extends Node implements Client {
 
   // Your code here...
   private Command command;
-  private Result result;
+  private PaxosRequest request;
+  private PaxosReply result;
   private int sequenceNum;
 
   /* -----------------------------------------------------------------------------------------------
@@ -30,8 +31,6 @@ public final class PaxosClient extends Node implements Client {
     super(address);
     this.servers = servers;
     sequenceNum = 0;
-    command = null;
-    result = null;
   }
 
   @Override
@@ -45,17 +44,20 @@ public final class PaxosClient extends Node implements Client {
   @Override
   public synchronized void sendCommand(Command operation) {
     // Your code here...
-    /*
-      if command != null
-        send to all servers inside servers.
-        set timer
-     */
+    AMOCommand com = new AMOCommand(command, seqNum++, address());
+    request = new Request(com);
+    result = null;
+
+    for (Address server : servers) {
+      this.send(request, server);
+    }
+    this.set(new ClientTimer(request), CLIENT_RETRY_MILLIS);
   }
 
   @Override
   public synchronized boolean hasResult() {
     // Your code here...
-    return false;
+    return result != null;
   }
 
   @Override
@@ -66,7 +68,6 @@ public final class PaxosClient extends Node implements Client {
     }
 
     return this.result;
-
   }
 
   /* -----------------------------------------------------------------------------------------------
@@ -77,9 +78,13 @@ public final class PaxosClient extends Node implements Client {
     /*
     verify PaxosReply sequence number matches our current.
       update result
-      increment seqNum
+      increment seqNum (not needed; this is done in sendCommand)
       notify()
      */
+    if (Objects.equal(request.command().sequenceNum(), m.result().sequenceNum())) {
+      result = m;
+      notify();
+    }
   }
 
   /* -----------------------------------------------------------------------------------------------
@@ -92,5 +97,11 @@ public final class PaxosClient extends Node implements Client {
       resend command to all servers in servers list
       reset timer
      */
+    if (Objects.equal(request, t.request()) && result == null) {
+      for (Address server : servers) {
+        this.send(request, server);
+      }
+      set(t, CLIENT_RETRY_MILLIS);
+    }
   }
 }

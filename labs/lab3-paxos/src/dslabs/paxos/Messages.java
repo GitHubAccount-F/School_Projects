@@ -10,6 +10,16 @@ import lombok.Data;
 
 // Your code here...
 @Data
+class PaxosRequest implements Message {
+  private final AMOCommand command;
+}
+
+@Data
+class PaxosReply implements Message {
+  private final AMOResult result;
+}
+
+@Data
 class HeartBeatResponse implements Message {
   private final int slot;
 }
