@@ -21,10 +21,10 @@ final class HeartbeatSenderTimer implements Timer {
   //static final int CLIENT_RETRY_MILLIS = 100;
 }
 
-final class p1aTimer implements Timer {
+final class P1aTimer implements Timer {
   //static final int CLIENT_RETRY_MILLIS = 100;
 }
 
-final class p2aTimer implements Timer {
+final class P2aTimer implements Timer {
   //static final int CLIENT_RETRY_MILLIS = 100;
 }

@@ -26,11 +26,16 @@ public class PaxosServer extends Node {
   // Acceptor state
   private Ballot ballot;
   private List<Pvalue> accepted_Pvalues;
+  private boolean receivedHeartbeat; // used to verify you received a heartbeat from leader
+    //in between two-heartbeat timers
 
   // Leader state
   private boolean active;
   private Ballot ballot_num;
   private Map<Pvalue, List<Address>> proposals;
+  // for the chosen variable, I'm thinking proposals handle that
+  // as we can keep track of if majority of servers accept a proposal inside the map
+  private Map<Address, List<Pvalue>> seen; // used for election when trying to become leader
 
 
 
@@ -69,6 +74,7 @@ public class PaxosServer extends Node {
     this.servers = servers;
 
     // Your code here...
+    // initialize all variables
   }
 
   @Override
@@ -78,6 +84,7 @@ public class PaxosServer extends Node {
       /*
       we set active to true,
        */
+    // set heartbeatCheckTimer
   }
 
   /* -----------------------------------------------------------------------------------------------
@@ -162,7 +169,93 @@ public class PaxosServer extends Node {
    * ---------------------------------------------------------------------------------------------*/
   private void handlePaxosRequest(PaxosRequest m, Address sender) {
     // Your code here...
+    /*
+      accept only if you are the leader and that application has not executed it
+        find available slot in replica, increment slot_in
+        send out proposals to acceptors(proposals are pvalues, I already defined them in messages)
+        wrap proposal with a P2a message, and send to all servers(including leader)
+        set p2a timer
+       if app executed command,
+        send back execute(command) from app
+     */
   }
+
+  private void handleP1a(P1a m, Address sender) {
+    // Your code here...
+    /*
+        if you are a leader and receive a higher ballot:
+          become acceptor/follower
+          (maybe) send p1b messages
+          set seen, proposals to null
+        else if you are an acceptor:
+          compare to current ballot,
+            if higher update ballot and send p1b message
+     */
+  }
+
+  private void handleP2a(P2a m, Address sender) {
+    // Your code here...
+    /*
+    // ***** case idk about: what if we get a p2a message from another leader
+
+      if acceptor and has not already accepted this P2a:
+        only accept if the ballot number in the P2a is >= to current ballot and slot is free
+        send back P2b message
+     */
+
+  }
+
+  private void handleP1b(P1b m, Address sender) {
+    // Your code here...
+    /*
+      if check if  # keys in "seen" is majority):
+        set active to true
+        iterate over map:
+        for slots, if there is a majority for a command, then consider that chosen
+        otherwise, add the highest ballot proposal into the proposal variable
+
+
+     */
+
+  }
+
+  private void handleP2b(P2b m, Address sender) {
+    // Your code here...
+
+    /*
+      if you are the leader:
+        accept p2b message inside the proposals map
+        if there is a majority:
+          increment slot_out(also update status of slot)
+          execute command
+          remove proposal from proposal map
+        else:
+          wait until you receive a majority
+     */
+  }
+
+  private void handleHeartbeat(Heartbeat m, Address sender) {
+    /*
+    case idk about: what if you are another leader that receives a heartbeat message
+        if you are acceptor
+          set receivedHeartbeat = true;
+          update your log to match that of the leader(details on doc)
+          update commands
+          for garbage collection, if garbage_slot ! -1:
+            remove all slots up to garbage_slot in replica(and in accepted list too???)
+     */
+  }
+
+  private void handleHeartbeatResponse(HeartBeatResponse m, Address sender) {
+    /*
+    if you are the leader(active = true):
+      add latest slot executed by servers to LatestExecutedList
+      if LatestExecutedList has all servers(include leader)
+        update garbage_collect
+     */
+  }
+
+
 
   // Your code here...
 
@@ -170,6 +263,45 @@ public class PaxosServer extends Node {
    *  Timer Handlers
    * ---------------------------------------------------------------------------------------------*/
   // Your code here...
+
+  private void onHeartbeatCheckTimer(HeartbeatCheckTimer t) {
+    /*
+          if active = false and receivedHeartbeat = false
+            server tries to become leader
+            start sending p1a requests, but with a ballot consisting of
+            (server number.round # + 1)
+           else: <- this may need some additional checks to ensure no bugs slip past
+             we already received a heartbeat, so set heartbeat to false
+             reset timer
+
+     */
+  }
+
+  private void onHeartbeatSenderTimer(HeartbeatSenderTimer t) {
+  /*
+    if you are the leader:
+      send a heartbeat to all servers(except yourself) consisting of
+      the latest slot to be executed, your log, garbage collect slot, slot_in, and slot_out
+      reset timer
+
+   */
+  }
+
+  private void onP1aTimer(P1aTimer t) {
+    /*
+        if you have not acknowledged another leader and still haven't received a majority of p1b
+          send p1a again
+          reset timer
+     */
+  }
+
+  private void onP2aTimer(P2aTimer t) {
+  /*
+    if leader:
+      if proposal has not received a majority yet, resend that proposals
+      reset timer for that specific proposal.
+   */
+  }
 
   /* -----------------------------------------------------------------------------------------------
    *  Utils
