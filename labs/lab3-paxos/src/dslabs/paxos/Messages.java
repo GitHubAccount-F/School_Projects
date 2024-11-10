@@ -3,7 +3,9 @@ package dslabs.paxos;
 import dslabs.framework.Address;
 import dslabs.framework.Command;
 import dslabs.framework.Message;
+import dslabs.paxos.PaxosServer.LogEntry;
 import java.util.List;
+import java.util.Map;
 import lombok.Data;
 
 // Your code here...
@@ -15,14 +17,14 @@ class HeartBeatResponse implements Message {
 @Data
 class Heartbeat implements Message {
   private final int garbage_slot;
-  // leaders log
+  private final Map<Integer, LogEntry> log;
   private final int slot_in;
   private final int slot_out;
 }
 
 @Data
 class Ballot implements Message {
-  private final double roundNum;
+  private final int roundNum;
   private final Address address;
 }
 

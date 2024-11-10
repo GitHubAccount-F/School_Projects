@@ -11,20 +11,22 @@ final class ClientTimer implements Timer {
 }
 
 // Your code here...
-
+@Data
 final class HeartbeatCheckTimer implements Timer {
-  //static final int CLIENT_RETRY_MILLIS = 100;
+  static final int HEARTBEATCHECK_RETRY_MILLIS = 100;
 }
 
-
+@Data
 final class HeartbeatSenderTimer implements Timer {
-  //static final int CLIENT_RETRY_MILLIS = 100;
+  static final int HEARTBEATSENDER_RETRY_MILLIS = 100;
 }
-
+@Data
 final class P1aTimer implements Timer {
-  //static final int CLIENT_RETRY_MILLIS = 100;
+  static final int P1aTimer_RETRY_MILLIS = 100;
+  private final P1a p1a;
 }
-
+@Data
 final class P2aTimer implements Timer {
-  //static final int CLIENT_RETRY_MILLIS = 100;
+  static final int P2aTimer_RETRY_MILLIS = 100;
+  private final Pvalue slot;
 }

@@ -1,9 +1,16 @@
 package dslabs.paxos;
 
+import static dslabs.paxos.HeartbeatCheckTimer.HEARTBEATCHECK_RETRY_MILLIS;
+import static dslabs.paxos.HeartbeatSenderTimer.HEARTBEATSENDER_RETRY_MILLIS;
+import static dslabs.paxos.P1aTimer.P1aTimer_RETRY_MILLIS;
+import static dslabs.paxos.P2aTimer.P2aTimer_RETRY_MILLIS;
+import static dslabs.paxos.ClientTimer.CLIENT_RETRY_MILLIS;
+
 import dslabs.framework.Address;
 import dslabs.framework.Application;
 import dslabs.framework.Command;
 import dslabs.framework.Node;
+import dslabs.primarybackup.GetViewTimer;
 import java.util.List;
 import java.util.Map;
 import lombok.EqualsAndHashCode;
@@ -15,6 +22,7 @@ public class PaxosServer extends Node {
   /** All servers in the Paxos group, including this one. */
   private final Address[] servers;
 
+  private int majority; // varible representing int size of majority
   // Your code here...
   // Replica state
   private Map<Integer, LogEntry> log;
@@ -275,6 +283,21 @@ public class PaxosServer extends Node {
              reset timer
 
      */
+    if (!active && !receivedHeartbeat) {
+      // server did not receive ping in-between two consecutive timers, so
+      // it tries to become leader
+      this.ballot = new Ballot(this.ballot.roundNum() + 1, this.address());
+      P1a message = new P1a(ballot);
+      for (int i = 0; i < servers.length; i++) {
+        if (this.address() != servers[i]) {
+          send(message, servers[i]);
+        }
+      }
+      this.set(new P1aTimer(message), P1aTimer_RETRY_MILLIS);
+    } else if (receivedHeartbeat && !active) {
+      receivedHeartbeat = false;
+      set(t, HEARTBEATCHECK_RETRY_MILLIS);
+    }
   }
 
   private void onHeartbeatSenderTimer(HeartbeatSenderTimer t) {
@@ -285,14 +308,38 @@ public class PaxosServer extends Node {
       reset timer
 
    */
+    if (active) {
+      int garbage_slot = -1;
+      if (latest_Executed_List.size() == servers.length) {
+        for (int i = 0; i < latest_Executed_List.size(); i++) {
+          garbage_slot = Math.min(latest_Executed_List.get(i), garbage_slot);
+        }
+      }
+      Heartbeat beat = new Heartbeat(garbage_slot, log, slot_in, slot_out);
+      for (int i = 0; i < servers.length; i++) {
+        if (this.address() != servers[i]) {
+          send(beat, servers[i]);
+        }
+      }
+      set(t, HEARTBEATSENDER_RETRY_MILLIS);
+    }
   }
 
   private void onP1aTimer(P1aTimer t) {
+
     /*
         if you have not acknowledged another leader and still haven't received a majority of p1b
           send p1a again
           reset timer
      */
+    if (!active && !receivedHeartbeat & seen.keySet().size() < majority) {
+      for (int i = 0; i < servers.length; i++) {
+        if (this.address() != servers[i]) {
+          send(t.p1a(), servers[i]);
+        }
+      }
+      set(t, P1aTimer_RETRY_MILLIS);
+    }
   }
 
   private void onP2aTimer(P2aTimer t) {
@@ -301,6 +348,12 @@ public class PaxosServer extends Node {
       if proposal has not received a majority yet, resend that proposals
       reset timer for that specific proposal.
    */
+    if (active && proposals.get(t.slot()).size() < majority) {
+      for (int i = 0; i < servers.length; i++) {
+        send(t.slot(), servers[i]);
+      }
+      this.set(t, P2aTimer_RETRY_MILLIS);
+    }
   }
 
   /* -----------------------------------------------------------------------------------------------
