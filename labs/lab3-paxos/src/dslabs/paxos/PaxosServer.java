@@ -6,13 +6,17 @@ import static dslabs.paxos.P1aTimer.P1aTimer_RETRY_MILLIS;
 import static dslabs.paxos.P2aTimer.P2aTimer_RETRY_MILLIS;
 import static dslabs.paxos.ClientTimer.CLIENT_RETRY_MILLIS;
 
+import dslabs.atmostonce.AMOApplication;
 import dslabs.framework.Address;
 import dslabs.framework.Application;
 import dslabs.framework.Command;
 import dslabs.framework.Node;
-import dslabs.primarybackup.GetViewTimer;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
@@ -21,6 +25,7 @@ import lombok.ToString;
 public class PaxosServer extends Node {
   /** All servers in the Paxos group, including this one. */
   private final Address[] servers;
+  AMOApplication app;
 
   private int majority; // varible representing int size of majority
   // Your code here...
@@ -28,58 +33,31 @@ public class PaxosServer extends Node {
   private Map<Integer, LogEntry> log;
   private int slot_out;
   private int slot_in;
-  private List<Integer> latest_Executed_List;
+  private Map<Address, Integer> latest_Executed_List;
+  private int garbage_slot;
 
 
   // Acceptor state
-  private Ballot ballot;
+  private Ballot ballot_acceptor;
   private List<Pvalue> accepted_Pvalues;
   private boolean receivedHeartbeat; // used to verify you received a heartbeat from leader
     //in between two-heartbeat timers
 
   // Leader state
   private boolean active;
-  private Ballot ballot_num;
+  private Ballot ballot_leader;
   private Map<Pvalue, List<Address>> proposals;
   // for the chosen variable, I'm thinking proposals handle that
   // as we can keep track of if majority of servers accept a proposal inside the map
   private Map<Address, List<Pvalue>> seen; // used for election when trying to become leader
 
-
-
-
-
-
-  class LogEntry {
-
-    private Ballot ballot;
-    private PaxosLogSlotStatus status;
-    private Command command;
-
-    LogEntry(Ballot ballot, PaxosLogSlotStatus status, Command command) {
-      this.ballot = ballot;
-      this.status = status;
-      this.command = command;
-    }
-
-    public Ballot getLogBallot() {
-      return ballot;
-    }
-
-    public PaxosLogSlotStatus getLogStatus() {
-      return status;
-    }
-
-    public Command getLogCommand() {
-      return command;
-    }
-  }
   /* -----------------------------------------------------------------------------------------------
    *  Construction and Initialization
    * ---------------------------------------------------------------------------------------------*/
   public PaxosServer(Address address, Address[] servers, Application app) {
     super(address);
     this.servers = servers;
+    app = new AMOApplication<>(app, new HashMap<>(), new HashMap<>());
 
     // Your code here...
     // initialize all variables
@@ -93,6 +71,33 @@ public class PaxosServer extends Node {
       we set active to true,
        */
     // set heartbeatCheckTimer
+    if (this.address().equals(servers[0])) {
+      // we hardcode the first server to be the leader
+      active = true;
+      ballot_leader = new Ballot(0, this.address());
+      proposals = new HashMap<>();
+      seen = new HashMap<>();
+      // set acceptor state to null
+      ballot_acceptor = null;
+      accepted_Pvalues = null;
+      receivedHeartbeat = false;
+    } else { // for acceptors
+      active = false;
+      ballot_acceptor = new Ballot(-1, this.address()); // we set the round to -1 to it can accept ballots from leader
+      accepted_Pvalues = new ArrayList<>();
+      receivedHeartbeat = false;
+      // set leader state to null
+      ballot_leader = null;
+      proposals = null;
+      seen = null;
+    }
+    // set replica state for all servers
+    log = new HashMap<>();
+    slot_out = 1;
+    slot_in = 1;
+    latest_Executed_List = new HashMap<>();
+    garbage_slot = 0; // slots start at 1, so it should be true forever that
+    // all slots >= garbage_slot + 1 have not been garbage collected
   }
 
   /* -----------------------------------------------------------------------------------------------
@@ -118,7 +123,10 @@ public class PaxosServer extends Node {
    */
   public PaxosLogSlotStatus status(int logSlotNum) {
     // Your code here...
-    return null;
+    if (garbage_slot >= logSlotNum) {
+      return PaxosLogSlotStatus.CLEARED;
+    }
+    return log.get(logSlotNum).status();
   }
 
   /**
@@ -138,8 +146,12 @@ public class PaxosServer extends Node {
    * @see PaxosLogSlotStatus
    */
   public Command command(int logSlotNum) {
-    // Your code here...
-    return null;
+    // if either it was garbage collected or we don't have that log slot
+    if (garbage_slot >= logSlotNum || !log.containsKey(logSlotNum)) {
+      return null;
+    }
+    LogEntry entry = log.get(logSlotNum);
+    return entry.command();
   }
 
   /**
@@ -154,7 +166,7 @@ public class PaxosServer extends Node {
    */
   public int firstNonCleared() {
     // Your code here...
-    return 1;
+    return garbage_slot + 1;
   }
 
   /**
@@ -177,6 +189,19 @@ public class PaxosServer extends Node {
    * ---------------------------------------------------------------------------------------------*/
   private void handlePaxosRequest(PaxosRequest m, Address sender) {
     // Your code here...
+    if (active && !app.alreadyExecuted(m.command())) {
+      int slotChosen = slot_in++;
+      Pvalue pvalue = new Pvalue(this.ballot_leader, slotChosen, m.command());
+      P2a message = new P2a(pvalue);
+      for (int i = 0; i < servers.length; i++) {
+        if (!this.address().equals(servers[i])) {
+          send(message, servers[i]);
+        }
+      }
+      set(new P2aTimer(pvalue), P2aTimer_RETRY_MILLIS);
+    } else if(active && app.alreadyExecuted(m.command())) {
+        send(new PaxosReply(app.execute(m.command())), sender);
+    }
     /*
       accept only if you are the leader and that application has not executed it
         find available slot in replica, increment slot_in
@@ -186,6 +211,7 @@ public class PaxosServer extends Node {
        if app executed command,
         send back execute(command) from app
      */
+
   }
 
   private void handleP1a(P1a m, Address sender) {
@@ -199,17 +225,51 @@ public class PaxosServer extends Node {
           compare to current ballot,
             if higher update ballot and send p1b message
      */
+    if (!active) { // acceptor
+      if (this.ballot_acceptor.compareTo(m.ballot()) <= 0) {
+        this.ballot_acceptor = m.ballot();
+        P1b message = new P1b(accepted_Pvalues);
+        send(message, sender);
+      }
+    } else { // leader
+      if (this.ballot_leader.compareTo(m.ballot()) < 0) {
+        // become follower
+        active = false;
+        proposals = null;
+        seen = null;
+        ballot_leader = null;
+        ballot_acceptor = m.ballot();
+        accepted_Pvalues = new ArrayList<>();
+        P1b message = new P1b(accepted_Pvalues);
+        send(message, sender);
+      }
+    }
   }
 
   private void handleP2a(P2a m, Address sender) {
     // Your code here...
     /*
     // ***** case idk about: what if we get a p2a message from another leader
+    // i assume we become a follower
 
       if acceptor and has not already accepted this P2a:
         only accept if the ballot number in the P2a is >= to current ballot and slot is free
         send back P2b message
      */
+
+    if (!active && !accepted_Pvalues.contains(m.pvalue())) {
+      if (this.ballot_acceptor.compareTo(m.pvalue().ballot()) <= 0 &&
+          !log.containsKey(m.pvalue().slot()) && m.pvalue().slot() == slot_in) {
+        // we accept
+        slot_in++;
+        LogEntry entry = new LogEntry(m.pvalue().ballot(), PaxosLogSlotStatus.ACCEPTED, m.pvalue().command());
+        log.put(m.pvalue().slot(), entry);
+        // send back p2B message
+        P2b message = new P2b(m.pvalue().ballot(), m.pvalue().slot());
+        send(message, sender);
+      }
+
+    }
 
   }
 
@@ -224,6 +284,9 @@ public class PaxosServer extends Node {
 
 
      */
+    if (!active) { // what if you become a leader and more p1b messages come in?
+
+    }
 
   }
 
@@ -286,8 +349,8 @@ public class PaxosServer extends Node {
     if (!active && !receivedHeartbeat) {
       // server did not receive ping in-between two consecutive timers, so
       // it tries to become leader
-      this.ballot = new Ballot(this.ballot.roundNum() + 1, this.address());
-      P1a message = new P1a(ballot);
+      this.ballot_acceptor = new Ballot(this.ballot_acceptor.roundNum() + 1, this.address());
+      P1a message = new P1a(ballot_acceptor);
       for (int i = 0; i < servers.length; i++) {
         if (this.address() != servers[i]) {
           send(message, servers[i]);
@@ -309,7 +372,6 @@ public class PaxosServer extends Node {
 
    */
     if (active) {
-      int garbage_slot = -1;
       if (latest_Executed_List.size() == servers.length) {
         for (int i = 0; i < latest_Executed_List.size(); i++) {
           garbage_slot = Math.min(latest_Executed_List.get(i), garbage_slot);
@@ -360,4 +422,16 @@ public class PaxosServer extends Node {
    *  Utils
    * ---------------------------------------------------------------------------------------------*/
   // Your code here...
+  @Data
+  public static class LogEntry {
+    private Ballot ballot;
+    private PaxosLogSlotStatus status;
+    private Command command;
+
+    public LogEntry(Ballot ballot, PaxosLogSlotStatus status, Command command) {
+      this.ballot = ballot;
+      this.status = status;
+      this.command = command;
+    }
+  }
 }

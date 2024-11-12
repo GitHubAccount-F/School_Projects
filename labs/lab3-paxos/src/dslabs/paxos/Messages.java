@@ -1,5 +1,7 @@
 package dslabs.paxos;
 
+import dslabs.atmostonce.AMOCommand;
+import dslabs.atmostonce.AMOResult;
 import dslabs.framework.Address;
 import dslabs.framework.Command;
 import dslabs.framework.Message;
@@ -33,9 +35,18 @@ class Heartbeat implements Message {
 }
 
 @Data
-class Ballot implements Message {
+class Ballot implements Message, Comparable<Ballot> {
   private final int roundNum;
   private final Address address;
+
+  @Override
+  public int compareTo(Ballot other) {
+    int compare = Integer.compare(this.roundNum, other.roundNum);
+    if (compare != 0) {
+      return compare;
+    }
+    return this.address.compareTo(other.address);
+  }
 }
 
 @Data

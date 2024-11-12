@@ -1,6 +1,6 @@
 package dslabs.paxos;
 
-import static dslabs.primarybackup.ClientTimer.CLIENT_RETRY_MILLIS;
+import static dslabs.paxos.ClientTimer.CLIENT_RETRY_MILLIS;
 
 import dslabs.atmostonce.AMOCommand;
 import dslabs.framework.Address;
@@ -8,8 +8,6 @@ import dslabs.framework.Client;
 import dslabs.framework.Command;
 import dslabs.framework.Node;
 import dslabs.framework.Result;
-import dslabs.primarybackup.GetView;
-import dslabs.primarybackup.Request;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
@@ -21,7 +19,7 @@ public final class PaxosClient extends Node implements Client {
   // Your code here...
   private Command command;
   private PaxosRequest request;
-  private PaxosReply result;
+  private Result result;
   private int sequenceNum;
 
   /* -----------------------------------------------------------------------------------------------
@@ -44,14 +42,14 @@ public final class PaxosClient extends Node implements Client {
   @Override
   public synchronized void sendCommand(Command operation) {
     // Your code here...
-    AMOCommand com = new AMOCommand(command, seqNum++, address());
-    request = new Request(com);
+    AMOCommand com = new AMOCommand(command, sequenceNum, address());
+    request = new PaxosRequest(com);
     result = null;
 
     for (Address server : servers) {
       this.send(request, server);
     }
-    this.set(new ClientTimer(request), CLIENT_RETRY_MILLIS);
+    this.set(new ClientTimer(sequenceNum), CLIENT_RETRY_MILLIS);
   }
 
   @Override
@@ -66,7 +64,6 @@ public final class PaxosClient extends Node implements Client {
     while (this.result == null) {
       this.wait();
     }
-
     return this.result;
   }
 
@@ -82,7 +79,7 @@ public final class PaxosClient extends Node implements Client {
       notify()
      */
     if (Objects.equal(request.command().sequenceNum(), m.result().sequenceNum())) {
-      result = m;
+      result = m.result();
       notify();
     }
   }
