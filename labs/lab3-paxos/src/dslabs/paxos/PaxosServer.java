@@ -78,7 +78,7 @@ public class PaxosServer extends Node {
       proposals = new HashMap<>();
       seen = new HashMap<>();
       // set acceptor state to null
-      ballot_acceptor = null;
+      ballot_acceptor = new Ballot(0, this.address());
       accepted_Pvalues = null;
       receivedHeartbeat = false;
     } else { // for acceptors
@@ -147,7 +147,9 @@ public class PaxosServer extends Node {
    */
   public Command command(int logSlotNum) {
     // if either it was garbage collected or we don't have that log slot
-    if (garbage_slot >= logSlotNum || !log.containsKey(logSlotNum)) {
+    if (garbage_slot >= logSlotNum || !log.containsKey(logSlotNum) ||
+        status(logSlotNum) == PaxosLogSlotStatus.CLEARED ||
+        status(logSlotNum) == PaxosLogSlotStatus.EMPTY) {
       return null;
     }
     LogEntry entry = log.get(logSlotNum);
@@ -181,6 +183,7 @@ public class PaxosServer extends Node {
    */
   public int lastNonEmpty() {
     // Your code here...
+    // finish implementing
     return 0;
   }
 
@@ -265,7 +268,7 @@ public class PaxosServer extends Node {
         LogEntry entry = new LogEntry(m.pvalue().ballot(), PaxosLogSlotStatus.ACCEPTED, m.pvalue().command());
         log.put(m.pvalue().slot(), entry);
         // send back p2B message
-        P2b message = new P2b(m.pvalue().ballot(), m.pvalue().slot());
+        P2b message = new P2b(m.pvalue().ballot(), m.pvalue());
         send(message, sender);
       }
 
@@ -281,11 +284,21 @@ public class PaxosServer extends Node {
         iterate over map:
         for slots, if there is a majority for a command, then consider that chosen
         otherwise, add the highest ballot proposal into the proposal variable
-
-
      */
-    if (!active) { // what if you become a leader and more p1b messages come in?
-
+    // what if you become a leader and more p1b messages come in?
+    if (!active) {
+      if (seen == null) {
+        seen = new HashMap<>();
+      }
+      if (!seen.containsKey(sender)) {
+        seen.put(sender, m.pvalues());
+      }
+      // check if we have a majority
+      if (seen.keySet().size() >= majority) {
+        active = true;
+        proposals = new HashMap<>();
+        // perform logic of picking proposals to send out
+      }
     }
 
   }
@@ -303,6 +316,25 @@ public class PaxosServer extends Node {
         else:
           wait until you receive a majority
      */
+    if (active) {
+      if (proposals.containsKey(m.slot())) { // verifies we haven't removed the proposal yet(there is not majoirty yet)
+        List<Address> list = proposals.get(m.slot());
+        list.add(sender);
+        if (list.size() >= majority) {
+          log.get(m.slot().slot()).setStatus(PaxosLogSlotStatus.CHOSEN);
+          if (m.slot().slot() == slot_out) {
+            slot_out++;
+            // only execute command whenever we increment slot_out
+            app.execute(m.slot().command());
+            // remove proposal
+            proposals.remove(m.slot());
+          }
+        } else {
+          // wait for majority to occur
+        }
+      }
+
+    }
   }
 
   private void handleHeartbeat(Heartbeat m, Address sender) {
@@ -315,6 +347,16 @@ public class PaxosServer extends Node {
           for garbage collection, if garbage_slot ! -1:
             remove all slots up to garbage_slot in replica(and in accepted list too???)
      */
+
+    if (!active) {
+      // verify if heartbeat is from leader
+      if (m.ballot_leader().equals(this.ballot_acceptor)) {
+        receivedHeartbeat = true;
+        // update acceptor logs
+        // execute commands
+        // perform garbage collection
+      }
+    }
   }
 
   private void handleHeartbeatResponse(HeartBeatResponse m, Address sender) {
@@ -324,6 +366,12 @@ public class PaxosServer extends Node {
       if LatestExecutedList has all servers(include leader)
         update garbage_collect
      */
+    if (active) {
+      latest_Executed_List.put(sender, m.slot());
+      if (latest_Executed_List.keySet().size() == servers.length) {
+        garbage_slot = findMinSlot(latest_Executed_List);
+      }
+    }
   }
 
 
@@ -349,6 +397,7 @@ public class PaxosServer extends Node {
     if (!active && !receivedHeartbeat) {
       // server did not receive ping in-between two consecutive timers, so
       // it tries to become leader
+      seen = null;
       this.ballot_acceptor = new Ballot(this.ballot_acceptor.roundNum() + 1, this.address());
       P1a message = new P1a(ballot_acceptor);
       for (int i = 0; i < servers.length; i++) {
@@ -377,7 +426,7 @@ public class PaxosServer extends Node {
           garbage_slot = Math.min(latest_Executed_List.get(i), garbage_slot);
         }
       }
-      Heartbeat beat = new Heartbeat(garbage_slot, log, slot_in, slot_out);
+      Heartbeat beat = new Heartbeat(garbage_slot, log, slot_in, slot_out, ballot_leader);
       for (int i = 0; i < servers.length; i++) {
         if (this.address() != servers[i]) {
           send(beat, servers[i]);
@@ -433,5 +482,18 @@ public class PaxosServer extends Node {
       this.status = status;
       this.command = command;
     }
+
+    public void setStatus(PaxosLogSlotStatus status) {
+      this.status = status;
+    }
+  }
+
+  public static int findMinSlot(Map<Address, Integer> latest_Executed_List) {
+    int min_slot = Integer.MAX_VALUE;
+    for (Address x : latest_Executed_List.keySet()) {
+      min_slot = Math.min(latest_Executed_List.get(x), min_slot);
+    }
+    return min_slot;
   }
 }
+

@@ -32,6 +32,7 @@ class Heartbeat implements Message {
   private final Map<Integer, LogEntry> log;
   private final int slot_in;
   private final int slot_out;
+  private final Ballot ballot_leader;
 }
 
 @Data
@@ -74,5 +75,5 @@ class P2a implements Message {
 @Data
 class P2b implements Message {
   private final Ballot ballot;
-  private final int slot;
+  private final Pvalue slot;
 }
