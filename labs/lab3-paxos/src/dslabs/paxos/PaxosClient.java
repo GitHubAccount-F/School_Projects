@@ -18,7 +18,7 @@ public final class PaxosClient extends Node implements Client {
 
   // Your code here...
   private Command command;
-  private PaxosRequest request;
+  //private PaxosRequest request;
   private Result result;
   private int sequenceNum;
 
@@ -29,6 +29,8 @@ public final class PaxosClient extends Node implements Client {
     super(address);
     this.servers = servers;
     sequenceNum = 0;
+    command = null;
+    result = null;
   }
 
   @Override
@@ -42,14 +44,18 @@ public final class PaxosClient extends Node implements Client {
   @Override
   public synchronized void sendCommand(Command operation) {
     // Your code here...
-    AMOCommand com = new AMOCommand(command, sequenceNum, address());
-    request = new PaxosRequest(com);
-    result = null;
+    if (operation != null) {
+      this.command = operation;
+      AMOCommand com = new AMOCommand(command, sequenceNum, address());
+      PaxosRequest req = new PaxosRequest(com);
+      result = null;
 
-    for (Address server : servers) {
-      this.send(request, server);
+      for (Address server : servers) {
+        this.send(req, server);
+      }
+      this.set(new ClientTimer(sequenceNum), CLIENT_RETRY_MILLIS);
     }
-    this.set(new ClientTimer(sequenceNum), CLIENT_RETRY_MILLIS);
+
   }
 
   @Override
@@ -78,7 +84,7 @@ public final class PaxosClient extends Node implements Client {
       increment seqNum (not needed; this is done in sendCommand)
       notify()
      */
-    if (request.command().sequenceNum() == m.result().sequenceNum()) {
+    if (this.sequenceNum == m.result().sequenceNum()) {
       result = m.result();
       notify();
     }
@@ -94,9 +100,11 @@ public final class PaxosClient extends Node implements Client {
       resend command to all servers in servers list
       reset timer
      */
-    if (request.command().sequenceNum() == t.sequenceNumber() && result == null) {
+    if (this.sequenceNum == t.sequenceNumber() && result == null) {
+      AMOCommand com = new AMOCommand(command, sequenceNum, address());
+      PaxosRequest req = new PaxosRequest(com);
       for (Address server : servers) {
-        this.send(request, server);
+        this.send(req, server);
       }
       set(t, CLIENT_RETRY_MILLIS);
     }
