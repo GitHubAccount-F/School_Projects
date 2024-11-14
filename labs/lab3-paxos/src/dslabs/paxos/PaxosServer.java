@@ -126,9 +126,10 @@ public class PaxosServer extends Node {
    */
   public PaxosLogSlotStatus status(int logSlotNum) {
     // Your code here...
-    if (garbage_slot >= logSlotNum) {
+    if (garbage_slot >= logSlotNum || !this.log.containsKey(logSlotNum)) {
       return PaxosLogSlotStatus.CLEARED;
     }
+
     return log.get(logSlotNum).status();
   }
 
@@ -201,17 +202,20 @@ public class PaxosServer extends Node {
    * ---------------------------------------------------------------------------------------------*/
   private void handlePaxosRequest(PaxosRequest m, Address sender) {
     // Your code here...
-    if (active && !app.alreadyExecuted(m.command())) {
-      int slotChosen = slot_in++;
-      Pvalue pvalue = new Pvalue(this.ballot, slotChosen, m.command());
-      P2a message = new P2a(pvalue);
-      for (int i = 0; i < servers.length; i++) {
-        send(message, servers[i]);
-      }
-      set(new P2aTimer(pvalue), P2aTimer_RETRY_MILLIS);
-    } else if(active && app.alreadyExecuted(m.command())) {
+    if (this.app != null) {
+      if (active && !app.alreadyExecuted(m.command())) {
+        int slotChosen = slot_in++;
+        Pvalue pvalue = new Pvalue(this.ballot, slotChosen, m.command());
+        P2a message = new P2a(pvalue);
+        for (int i = 0; i < servers.length; i++) {
+          send(message, servers[i]);
+        }
+        set(new P2aTimer(pvalue), P2aTimer_RETRY_MILLIS);
+      } else if(active && app.alreadyExecuted(m.command())) {
         send(new PaxosReply(app.execute(m.command())), sender);
+      }
     }
+
     /*
       accept only if you are the leader and that application has not executed it
         find available slot in replica, increment slot_in
