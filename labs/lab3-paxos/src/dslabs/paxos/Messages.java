@@ -64,7 +64,7 @@ class Pvalue implements Message {
 
 @Data
 class P1b implements Message {
-  private final List<Pvalue> pvalues;
+  private final Map<Integer, LogEntry> log;
 }
 
 @Data

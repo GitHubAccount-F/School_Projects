@@ -78,7 +78,7 @@ public final class PaxosClient extends Node implements Client {
       increment seqNum (not needed; this is done in sendCommand)
       notify()
      */
-    if (Objects.equal(request.command().sequenceNum(), m.result().sequenceNum())) {
+    if (request.command().sequenceNum() == m.result().sequenceNum()) {
       result = m.result();
       notify();
     }
@@ -94,7 +94,7 @@ public final class PaxosClient extends Node implements Client {
       resend command to all servers in servers list
       reset timer
      */
-    if (Objects.equal(request, t.request()) && result == null) {
+    if (request.command().sequenceNum() == t.sequenceNumber() && result == null) {
       for (Address server : servers) {
         this.send(request, server);
       }
