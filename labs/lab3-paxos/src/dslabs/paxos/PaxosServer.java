@@ -186,9 +186,13 @@ public class PaxosServer extends Node {
    */
   public int lastNonEmpty() {
     // Your code here...
-    if (garbage_slot + 1 == slot_in) {
-      return 0;
-    } else return garbage_slot + 1;
+    // Iterate backwards from the last slot number
+    for (int i = slot_in - 1; i > garbage_slot; i--) {
+      if (log.get(i).status != PaxosLogSlotStatus.EMPTY) {
+        return i;
+      }
+    }
+    // If all slots are empty, return 0
     return 0;
   }
 
