@@ -126,7 +126,7 @@ public class PaxosServer extends Node {
    */
   public PaxosLogSlotStatus status(int logSlotNum) {
     // Your code here...
-    if (garbage_slot >= logSlotNum || !this.log.containsKey(logSlotNum)) {
+    if (!this.log.containsKey(logSlotNum)) {
       return PaxosLogSlotStatus.CLEARED;
     }
 
@@ -202,7 +202,10 @@ public class PaxosServer extends Node {
    * ---------------------------------------------------------------------------------------------*/
   private void handlePaxosRequest(PaxosRequest m, Address sender) {
     // Your code here...
+    // makes sure server is set up
     if (this.app != null) {
+      // we must be the leader to accept
+      // if not already executed, send to all servers
       if (active && !app.alreadyExecuted(m.command())) {
         int slotChosen = slot_in++;
         Pvalue pvalue = new Pvalue(this.ballot, slotChosen, m.command());
@@ -210,8 +213,10 @@ public class PaxosServer extends Node {
         for (int i = 0; i < servers.length; i++) {
           send(message, servers[i]);
         }
+        // set timer for this p2a message
         set(new P2aTimer(pvalue), P2aTimer_RETRY_MILLIS);
       } else if(active && app.alreadyExecuted(m.command())) {
+        // if we already executed, just send something back to client
         send(new PaxosReply(app.execute(m.command())), sender);
       }
     }
@@ -271,7 +276,7 @@ public class PaxosServer extends Node {
         only accept if the ballot number in the P2a is >= to current ballot and slot is free
         send back P2b message
      */
-// fix
+// // only accept p2a message if ballot is <= ballot in message
     if (this.ballot.compareTo(m.pvalue().ballot()) <= 0) {
       if (active) { // handle case if a leader receives a p2a from a higher-ballot leader
         if (this.ballot.compareTo(m.pvalue().ballot()) < 0) {
@@ -283,8 +288,7 @@ public class PaxosServer extends Node {
       this.ballot = m.pvalue().ballot();
       // ifs its already chosen, ignore it
       if (log.containsKey(m.pvalue().slot()) &&
-          (log.get(m.pvalue().slot()).status == PaxosLogSlotStatus.ACCEPTED ||
-              log.get(m.pvalue().slot()).status == PaxosLogSlotStatus.EMPTY)) {
+          (log.get(m.pvalue().slot()).status == PaxosLogSlotStatus.ACCEPTED)) {
         // only update if the ballot is higher than the current one in the log
         if (this.ballot.compareTo(m.pvalue().ballot()) < 0) {
           LogEntry entry = new LogEntry(m.pvalue().ballot(), PaxosLogSlotStatus.ACCEPTED, m.pvalue().command());
@@ -292,7 +296,7 @@ public class PaxosServer extends Node {
           P2b message = new P2b(m.pvalue().ballot(), m.pvalue());
           send(message, sender);
         }
-      } else if (!log.containsKey(m.pvalue().slot())) {
+      } else if (!log.containsKey(m.pvalue().slot())) { // if the slot is new, it must go to slot_in
         if (m.pvalue().slot() == slot_in) {
           slot_in++;
           LogEntry entry = new LogEntry(m.pvalue().ballot(), PaxosLogSlotStatus.ACCEPTED, m.pvalue().command());
@@ -542,6 +546,7 @@ public class PaxosServer extends Node {
     }
   }
 
+  // used to for garbage collection
   public static int findMinSlot(Map<Address, Integer> latest_Executed_List) {
     int min_slot = Integer.MAX_VALUE;
     for (Address x : latest_Executed_List.keySet()) {
@@ -550,19 +555,27 @@ public class PaxosServer extends Node {
     return min_slot;
   }
 
+
+  // Given the seen list, we try to create a new proposals list when a server was just elected leader
   public static Map<Pvalue, List<Address>> findProposals(Map<Address, Map<Integer, LogEntry>> seen, Ballot server) {
     int majority = (seen.keySet().size() / 2) + 1;
     int minimum = Integer.MAX_VALUE; // used to find any empty slots
     int maximum = Integer.MIN_VALUE;
+    // This is what we will return
     Map<Pvalue, List<Address>> result = new HashMap<>();
+    // IDK about this, but if we come across a slot that already has a CHOSEN, we can ignore that
+    // slot in proposals
     Set<Integer> slotsToIgnore = new HashSet<>();
+    // For each slot, we have a map for Ballots -> # we seen so far(i can probbably simplify this)
     Map<Integer, Map<Ballot, Integer>> storage = new HashMap<>();
+    // Iterate through "seen"
     for (Address x : seen.keySet()) {
-      // iterate through acceptor log
+      // iterate through acceptor's log
       Map<Integer, LogEntry> log = seen.get(x);
       for (int slot: seen.get(x).keySet()) {
         minimum = Math.min(minimum, slot);
         maximum = Math.max(maximum, slot);
+        // if slot is CHOSEN, ignore in proposals
         if (log.get(slot).status == PaxosLogSlotStatus.CHOSEN) {
           slotsToIgnore.add(slot);
         } else if (log.get(slot).status == PaxosLogSlotStatus.ACCEPTED) {
@@ -578,14 +591,20 @@ public class PaxosServer extends Node {
     // Iterate through storage and find proposals
     for (int i = minimum; i <= maximum; i++) {
       if(!slotsToIgnore.contains(i)) {
+        // for each slot, we will iterate thorugh it's map and find either the ballot
+        // with the majority, or find the highest ballot and repropose that
         Map<Ballot, Integer> map = storage.get(i);
         Ballot highest = null;
         for (Ballot b : map.keySet()) {
           if (highest == null) {
             highest = b;
           } else if (map.get(b) == majority) {
+            // if we detect a majority, we know this log slot was already chosen,
+            // so we can ignore it
+            /*
             LogEntry check = seen.get(highest.address()).get(i);
             result.put(new Pvalue(server, i, check.command), new ArrayList<>());
+            */
             break;
           } else {
             if (b.compareTo(highest) > 0) {
@@ -593,6 +612,7 @@ public class PaxosServer extends Node {
             }
           }
         }
+        // if we found no majority ballot, repropose the highest slot
         LogEntry check = seen.get(highest.address()).get(i);
         result.put(new Pvalue(server, i, check.command), new ArrayList<>());
       } else if (!storage.containsKey(i)) {
@@ -602,12 +622,5 @@ public class PaxosServer extends Node {
     }
     return result;
   }
-
-  /*
-  private Map<Pvalue, List<Address>> proposals;
-  // for the chosen variable, I'm thinking proposals handle that
-  // as we can keep track of if majority of servers accept a proposal inside the map
-  private Map<Address, List<Pvalue>> seen; // used for election when trying to become leader
-   */
 }
 
