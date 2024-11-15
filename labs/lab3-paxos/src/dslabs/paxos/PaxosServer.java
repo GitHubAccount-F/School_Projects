@@ -47,7 +47,7 @@ public class PaxosServer extends Node {
   //private Map<Integer, Pvalue> accepted_Pvalues; // we will only store accepted commands here
   //private List<Pvalue> accepted_Pvalues;
   private boolean receivedHeartbeat; // used to verify you received a heartbeat from leader
-    //in between two-heartbeat timers
+  //in between two-heartbeat timers
 
   // Leader state
   private boolean active;
@@ -87,6 +87,8 @@ public class PaxosServer extends Node {
       // set acceptor state to null
       //accepted_Pvalues = null;
       receivedHeartbeat = false;
+      // set heartbeat timer
+      set(new HeartbeatSenderTimer(), HEARTBEATSENDER_RETRY_MILLIS);
     } else { // for acceptors
       active = false;
       //accepted_Pvalues = new HashMap<>();
@@ -95,6 +97,7 @@ public class PaxosServer extends Node {
       proposals = null;
       seen = null;
       ballot = new Ballot(-1, this.address());
+      set(new HeartbeatCheckTimer(), HEARTBEATCHECK_RETRY_MILLIS);
     }
     // set replica state for all servers
 
@@ -128,7 +131,7 @@ public class PaxosServer extends Node {
    * @see PaxosLogSlotStatus
    */
   public PaxosLogSlotStatus status(int logSlotNum) {
-   // System.out.println("Server = " + this.address() + "  \nstatus = " + logSlotNum);
+    System.out.println("Server = " + this.address() + "  \nstatus = " + logSlotNum);
     // Your code here...
     if (garbage_slot < logSlotNum && !this.log.containsKey(logSlotNum)) {
       return PaxosLogSlotStatus.EMPTY;
@@ -157,7 +160,7 @@ public class PaxosServer extends Node {
    * @see PaxosLogSlotStatus
    */
   public Command command(int logSlotNum) {
-    //System.out.println("Server = " + this.address() + "   \ncommand = " + logSlotNum);
+    System.out.println("Server = " + this.address() + "   \ncommand = " + logSlotNum);
     // if either it was garbage collected or we don't have that log slot
     if (garbage_slot >= logSlotNum || !log.containsKey(logSlotNum) ||
         status(logSlotNum) == PaxosLogSlotStatus.CLEARED ||
@@ -214,11 +217,11 @@ public class PaxosServer extends Node {
     System.out.println("Server = " + this.address() + "   \n    handlePaxosRequest = " + m);
     System.out.println("Server = " + this.address() + " is leader = " + active + " and app = " + (this.app == null));
     if (this.app != null) {
-     // System.out.println("here1");
+      // System.out.println("here1");
       // we must be the leader to accept
       // if not already executed, send to all servers
       if (active && !app.alreadyExecuted(m.command())) {
-       // System.out.println("here2");
+        // System.out.println("here2");
         int slotChosen = slot_in;
         Pvalue pvalue = new Pvalue(this.ballot, slotChosen, m.command());
         if (!this.proposals.containsKey(pvalue) && !this.proposals.containsKey(new Pvalue(this.ballot, slotChosen - 1, m.command()))) {
@@ -275,6 +278,7 @@ public class PaxosServer extends Node {
         proposals = null;
         seen = null;
         this.ballot = m.ballot();
+        set(new HeartbeatCheckTimer(), HEARTBEATCHECK_RETRY_MILLIS);
         P1b message = new P1b(log);
         send(message, sender);
       }
@@ -301,6 +305,7 @@ public class PaxosServer extends Node {
           active = false;
           seen = null;
           proposals = null;
+          set(new HeartbeatCheckTimer(), HEARTBEATCHECK_RETRY_MILLIS);
         }
       }
       this.ballot = m.pvalue().ballot();
@@ -320,7 +325,9 @@ public class PaxosServer extends Node {
         System.out.println("       Server = " + this.address() + " handleP2a = here 2");
         // below: for the leader, we already incremented slot_in when sending the p2a, but we didn't do this for other acceptors
         if ((active && m.pvalue().slot + 1 == slot_in) || (!active && m.pvalue().slot() == slot_in)) {
-          slot_in++;
+          if (m.pvalue().slot() == slot_in) {
+            slot_in++;
+          }
           LogEntry entry = new LogEntry(m.pvalue().ballot(), PaxosLogSlotStatus.ACCEPTED, m.pvalue().command());
           log.put(m.pvalue().slot(), entry);
           P2b message = new P2b(m.pvalue().ballot(), m.pvalue());
@@ -356,6 +363,8 @@ public class PaxosServer extends Node {
       if (seen.keySet().size() >= majority) {
         active = true;
         proposals = findProposals(seen, this.ballot);
+        // set heartbeat timer
+        set(new HeartbeatSenderTimer(), HEARTBEATSENDER_RETRY_MILLIS);
         // send out all proposals
         for (Pvalue x : proposals.keySet()) {
           for (int i = 0; i < servers.length; i++) {
@@ -391,7 +400,7 @@ public class PaxosServer extends Node {
           System.out.println("Server = " + this.address() +  "  handleP2b here2 ");
           log.get(m.slot().slot()).setStatus(PaxosLogSlotStatus.CHOSEN);
           if (m.slot().slot() == slot_out) {
-            slot_out++;
+            slot_out = updateSlotOut(slot_out, slot_in, log);
             // only execute command whenever we increment slot_out
             app.execute(m.slot().command());
             // remove proposal
@@ -542,7 +551,8 @@ public class PaxosServer extends Node {
       if proposal has not received a majority yet, resend that proposals
       reset timer for that specific proposal.
    */
-    if (active && proposals.get(t.message().pvalue()).size() < majority) {
+    //System.out.println("Server = " + this.address() + " onP2aTimer = " + t);
+    if (active && proposals.containsKey(t.message().pvalue()) && proposals.get(t.message().pvalue()).size() < majority) {
       for (int i = 0; i < servers.length; i++) {
         send(t.message(), servers[i]);
       }
@@ -661,6 +671,16 @@ public class PaxosServer extends Node {
       }
     }
     return result;
+  }
+
+  // used to update slot_out whenever a command gets chosen
+  public static int updateSlotOut(int slot_out, int slot_in, Map<Integer, LogEntry> log) {
+    for (int i = slot_out + 1; i < slot_in; i++) {
+      if (log.containsKey(i) && log.get(i).status == PaxosLogSlotStatus.ACCEPTED) {
+        return i;
+      }
+    }
+    return slot_in;
   }
 }
 
