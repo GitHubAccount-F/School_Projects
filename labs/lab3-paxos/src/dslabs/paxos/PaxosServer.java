@@ -10,6 +10,7 @@ import dslabs.atmostonce.AMOApplication;
 import dslabs.framework.Address;
 import dslabs.framework.Application;
 import dslabs.framework.Command;
+import dslabs.framework.Message;
 import dslabs.framework.Node;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -82,6 +83,7 @@ public class PaxosServer extends Node {
       active = true;
       proposals = new HashMap<>();
       seen = new HashMap<>();
+      ballot = new Ballot(0, this.address());
       // set acceptor state to null
       //accepted_Pvalues = null;
       receivedHeartbeat = false;
@@ -92,9 +94,10 @@ public class PaxosServer extends Node {
       // set leader state to null
       proposals = null;
       seen = null;
+      ballot = new Ballot(-1, this.address());
     }
     // set replica state for all servers
-    ballot = new Ballot(0, this.address());
+
     log = new TreeMap<>();
     slot_out = 1;
     slot_in = 1;
@@ -211,22 +214,22 @@ public class PaxosServer extends Node {
     System.out.println("Server = " + this.address() + "   \n    handlePaxosRequest = " + m);
     System.out.println("Server = " + this.address() + " is leader = " + active + " and app = " + (this.app == null));
     if (this.app != null) {
-      System.out.println("here1");
+     // System.out.println("here1");
       // we must be the leader to accept
       // if not already executed, send to all servers
       if (active && !app.alreadyExecuted(m.command())) {
-        System.out.println("here2");
+       // System.out.println("here2");
         int slotChosen = slot_in;
-        slot_in++;
         Pvalue pvalue = new Pvalue(this.ballot, slotChosen, m.command());
-        if (!this.proposals.containsKey(pvalue)) {
+        if (!this.proposals.containsKey(pvalue) && !this.proposals.containsKey(new Pvalue(this.ballot, slotChosen - 1, m.command()))) {
+          slot_in++;
           proposals.put(pvalue, new ArrayList<>());
           P2a message = new P2a(pvalue);
           for (int i = 0; i < servers.length; i++) {
             send(message, servers[i]);
           }
           // set timer for this p2a message
-          set(new P2aTimer(pvalue), P2aTimer_RETRY_MILLIS);
+          set(new P2aTimer(message), P2aTimer_RETRY_MILLIS);
         }
 
       } else if(active && app.alreadyExecuted(m.command())) {
@@ -291,7 +294,7 @@ public class PaxosServer extends Node {
         send back P2b message
      */
 // // only accept p2a message if ballot is <= ballot in message
-    System.out.println("Server = " + this.address() + "    \n  handleP2a = " + m);
+    System.out.println("Server = " + this.address() + "  ballot = " + this.ballot + "  \n  handleP2a = " + m);
     if (this.ballot.compareTo(m.pvalue().ballot()) <= 0) {
       if (active) { // handle case if a leader receives a p2a from a higher-ballot leader
         if (this.ballot.compareTo(m.pvalue().ballot()) < 0) {
@@ -302,8 +305,10 @@ public class PaxosServer extends Node {
       }
       this.ballot = m.pvalue().ballot();
       // ifs its already chosen, ignore it
+      System.out.println("      Server = " + this.address() + "  handleP2a = here 0");
       if (log.containsKey(m.pvalue().slot()) &&
           (log.get(m.pvalue().slot()).status == PaxosLogSlotStatus.ACCEPTED)) {
+        System.out.println("      Server = " + this.address() + "  handleP2a = here 1");
         // only update if the ballot is higher than the current one in the log
         if (this.ballot.compareTo(m.pvalue().ballot()) < 0) {
           LogEntry entry = new LogEntry(m.pvalue().ballot(), PaxosLogSlotStatus.ACCEPTED, m.pvalue().command());
@@ -312,7 +317,9 @@ public class PaxosServer extends Node {
           send(message, sender);
         }
       } else if (!log.containsKey(m.pvalue().slot())) { // if the slot is new, it must go to slot_in
-        if (m.pvalue().slot() == slot_in) {
+        System.out.println("       Server = " + this.address() + " handleP2a = here 2");
+        // below: for the leader, we already incremented slot_in when sending the p2a, but we didn't do this for other acceptors
+        if ((active && m.pvalue().slot + 1 == slot_in) || (!active && m.pvalue().slot() == slot_in)) {
           slot_in++;
           LogEntry entry = new LogEntry(m.pvalue().ballot(), PaxosLogSlotStatus.ACCEPTED, m.pvalue().command());
           log.put(m.pvalue().slot(), entry);
@@ -377,10 +384,11 @@ public class PaxosServer extends Node {
      */
     System.out.println("Server = " + this.address() +  "    \nhandleP2b = " + m);
     if (active) {
-      if (proposals.containsKey(m.slot())) { // verifies we haven't removed the proposal yet(there is not majoirty yet)
-        List<Address> list = proposals.get(m.slot());
-        list.add(sender);
-        if (list.size() >= majority) {
+      if (proposals.containsKey(m.slot()) && !proposals.get(m.slot()).contains(sender)) { // verifies we haven't removed the proposal yet(there is not majoirty yet)
+        System.out.println("Server = " + this.address() +  "  handleP2b here1 ");
+        proposals.get(m.slot()).add(sender);
+        if (proposals.get(m.slot()).size() >= majority) {
+          System.out.println("Server = " + this.address() +  "  handleP2b here2 ");
           log.get(m.slot().slot()).setStatus(PaxosLogSlotStatus.CHOSEN);
           if (m.slot().slot() == slot_out) {
             slot_out++;
@@ -534,9 +542,9 @@ public class PaxosServer extends Node {
       if proposal has not received a majority yet, resend that proposals
       reset timer for that specific proposal.
    */
-    if (active && proposals.get(t.slot()).size() < majority) {
+    if (active && proposals.get(t.message().pvalue()).size() < majority) {
       for (int i = 0; i < servers.length; i++) {
-        send(t.slot(), servers[i]);
+        send(t.message(), servers[i]);
       }
       this.set(t, P2aTimer_RETRY_MILLIS);
     }
@@ -546,6 +554,21 @@ public class PaxosServer extends Node {
    *  Utils
    * ---------------------------------------------------------------------------------------------*/
   // Your code here...
+
+
+  @Data
+  public static class Pvalue {
+    private final Ballot ballot;
+    private final int slot;
+    private final Command command;
+
+    public Pvalue(Ballot ballot, int slot, Command command) {
+      this.ballot = ballot;
+      this.slot = slot;
+      this.command = command;
+    }
+  }
+
   @Data
   public static class LogEntry {
     private Ballot ballot;

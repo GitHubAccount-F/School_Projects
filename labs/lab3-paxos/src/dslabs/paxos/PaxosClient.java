@@ -85,7 +85,7 @@ public final class PaxosClient extends Node implements Client {
       notify()
      */
     if (this.sequenceNum == m.result().sequenceNum()) {
-      result = m.result();
+      result = m.result().result();
       notify();
     }
   }
