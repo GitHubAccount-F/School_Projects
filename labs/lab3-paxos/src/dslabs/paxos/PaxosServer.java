@@ -216,14 +216,19 @@ public class PaxosServer extends Node {
       // if not already executed, send to all servers
       if (active && !app.alreadyExecuted(m.command())) {
         System.out.println("here2");
-        int slotChosen = slot_in++;
+        int slotChosen = slot_in;
+        slot_in++;
         Pvalue pvalue = new Pvalue(this.ballot, slotChosen, m.command());
-        P2a message = new P2a(pvalue);
-        for (int i = 0; i < servers.length; i++) {
-          send(message, servers[i]);
+        if (!this.proposals.containsKey(pvalue)) {
+          proposals.put(pvalue, new ArrayList<>());
+          P2a message = new P2a(pvalue);
+          for (int i = 0; i < servers.length; i++) {
+            send(message, servers[i]);
+          }
+          // set timer for this p2a message
+          set(new P2aTimer(pvalue), P2aTimer_RETRY_MILLIS);
         }
-        // set timer for this p2a message
-        set(new P2aTimer(pvalue), P2aTimer_RETRY_MILLIS);
+
       } else if(active && app.alreadyExecuted(m.command())) {
         // if we already executed, just send something back to client
         send(new PaxosReply(app.execute(m.command())), sender);
@@ -286,7 +291,7 @@ public class PaxosServer extends Node {
         send back P2b message
      */
 // // only accept p2a message if ballot is <= ballot in message
-    System.out.println("Server = " + this.address() + "    \nhandleP2a = " + m);
+    System.out.println("Server = " + this.address() + "    \n  handleP2a = " + m);
     if (this.ballot.compareTo(m.pvalue().ballot()) <= 0) {
       if (active) { // handle case if a leader receives a p2a from a higher-ballot leader
         if (this.ballot.compareTo(m.pvalue().ballot()) < 0) {
