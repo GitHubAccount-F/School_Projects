@@ -6,6 +6,7 @@ import dslabs.framework.Address;
 import dslabs.framework.Command;
 import dslabs.framework.Message;
 import dslabs.paxos.PaxosServer.LogEntry;
+import dslabs.paxos.PaxosServer.Pvalue;
 import java.util.List;
 import java.util.Map;
 import lombok.Data;
@@ -55,12 +56,6 @@ class P1a implements Message {
   private final Ballot ballot;
 }
 
-@Data
-class Pvalue implements Message {
-  private final Ballot ballot;
-  private final int slot;
-  private final Command command;
-}
 
 @Data
 class P1b implements Message {

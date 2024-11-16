@@ -1,6 +1,7 @@
 package dslabs.paxos;
 
 import dslabs.framework.Timer;
+import dslabs.paxos.PaxosServer.Pvalue;
 import lombok.Data;
 
 @Data
@@ -18,7 +19,7 @@ final class HeartbeatCheckTimer implements Timer {
 
 @Data
 final class HeartbeatSenderTimer implements Timer {
-  static final int HEARTBEATSENDER_RETRY_MILLIS = 100;
+  static final int HEARTBEATSENDER_RETRY_MILLIS = 49;
 }
 @Data
 final class P1aTimer implements Timer {
@@ -28,5 +29,5 @@ final class P1aTimer implements Timer {
 @Data
 final class P2aTimer implements Timer {
   static final int P2aTimer_RETRY_MILLIS = 100;
-  private final Pvalue slot;
+  private final P2a message;
 }

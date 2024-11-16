@@ -43,6 +43,7 @@ public final class PaxosClient extends Node implements Client {
    * ---------------------------------------------------------------------------------------------*/
   @Override
   public synchronized void sendCommand(Command operation) {
+    System.out.println("CLIENT sendCommand");
     // Your code here...
     if (operation != null) {
       this.command = operation;
@@ -84,9 +85,11 @@ public final class PaxosClient extends Node implements Client {
       increment seqNum (not needed; this is done in sendCommand)
       notify()
      */
+    System.out.println("CLIENT handlePaxosReply  " + m + " and seq = " + sequenceNum);
     if (this.sequenceNum == m.result().sequenceNum()) {
       result = m.result().result();
       notify();
+      this.sequenceNum++;
     }
   }
 
