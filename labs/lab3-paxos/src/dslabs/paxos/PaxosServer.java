@@ -560,7 +560,7 @@ public class PaxosServer extends Node {
           send p1a again
           reset timer
      */
-    if (!active && !receivedHeartbeat & seen.keySet().size() < majority) {
+    if (!active && !receivedHeartbeat & seen != null && seen.keySet().size() < majority) {
       for (Address server : servers) {
         send(t.p1a(), server);
       }
