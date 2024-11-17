@@ -282,7 +282,6 @@ public class PaxosServer extends Node {
         // become acceptor
         active = false;
         proposals = null;
-        System.out.println("Server = " + this.address() + "over here");
         seen = null;
         this.ballot = m.ballot();
         set(new HeartbeatCheckTimer(), HEARTBEATCHECK_RETRY_MILLIS);
@@ -365,7 +364,14 @@ public class PaxosServer extends Node {
       // check if we have a majority
       if (seen.keySet().size() >= majority) {
         active = true;
+        // update proposals
         proposals = findProposals(seen, this.ballot);
+        // also update the log so that the new_leader has values that are chosen
+        updateLog(seen, this.log, this.app);
+        // also update slot_in and slot_out
+        slot_in = updateSlotIn(this.slot_in, this.log, this.proposals);
+        slot_out = updateSlotOut(this.slot_out, this.slot_in, this.log, this.app);
+        System.out.println("Server = " + this.address() + " newLogs = " + this.log);
         set(new HeartbeatSenderTimer(), HEARTBEATSENDER_RETRY_MILLIS);
         // send out all proposals
         for (Pvalue x : proposals.keySet()) {
@@ -397,22 +403,14 @@ public class PaxosServer extends Node {
     if (active) {
       //System.out.println("Server = " + this.address() +  "here 1   " + this.servers.length);
       if (proposals.containsKey(m.slot()) && !proposals.get(m.slot()).contains(sender)) { // verifies we haven't removed the proposal yet(there is not majoirty yet)
-        ////System.out.println("Server = " + this.address() +  "  handleP2b here1 ");
         proposals.get(m.slot()).add(sender);
-        //System.out.println("Server = " + this.address() +  "here 2");
         if (proposals.get(m.slot()).size() >= majority) {
-          //System.out.println("Server = " + this.address() +  "here 3");
-          ////System.out.println("Server = " + this.address() +  "  handleP2b here2 ");
           log.get(m.slot().slot()).setStatus(PaxosLogSlotStatus.CHOSEN);
-          if (m.slot().slot() == slot_out) {
-            //System.out.println("Server = " + this.address() +  "here 4");
-            slot_out = updateSlotOut(slot_out, slot_in, log);
-            // only execute command whenever we increment slot_out
-            app.execute(m.slot().command());
-            latest_Executed_command = Math.max(latest_Executed_command, m.slot().slot());
-            // remove proposal
-            proposals.remove(m.slot());
-          }
+          slot_out = updateSlotOut(slot_out, slot_in, log, this.app);
+          // only execute command whenever we increment slot_out
+          latest_Executed_command = Math.max(latest_Executed_command, slot_out - 1);
+          // remove proposal
+          proposals.remove(m.slot());
         }
       }
 
@@ -436,9 +434,7 @@ public class PaxosServer extends Node {
     // Check if the heartbeat is from the current leader and this server is not actively leading
     if (m.ballot_leader().compareTo(this.ballot) == 0 && !active) {
       receivedHeartbeat = true;
-      if (this.address().equals(servers[2])) {
-        System.out.println("Server 3 here ");
-      }
+
       // Update `slot_in` to reflect the leader's progress
       this.slot_in = Math.max(this.slot_in, m.slot_in());
 
@@ -453,28 +449,17 @@ public class PaxosServer extends Node {
         }
       }
 
+      slot_out = updateSlotOut(slot_out, slot_in, this.log, this.app);
+      latest_Executed_command = Math.max(latest_Executed_command, slot_out - 1); // keeps track of the highest executed slot
       // Execute commands for CHOSEN slots and update `slot_out`
       for (int slot : this.log.keySet()) {
-        if (slot_in != slot_out) {
-          if (garbage_slot >= slot) { // update garbage collection
-            log.remove(slot);
-          } else if (this.log.get(slot).status == PaxosLogSlotStatus.CHOSEN && slot <= this.slot_out) {
-            latest_Executed_command = Math.max(latest_Executed_command, slot); // keeps track of the highest executed slot
-            if (this.log.get(slot).command != null) {
-              app.execute(this.log.get(slot).command); // Apply the command
-            }
-            if (slot == this.slot_out) {
-              this.slot_out = updateSlotOut(slot_in, slot_out, this.log); // Move `slot_out` to the next unexecuted slot
-            }
-          }
+        if (slot_in != slot_out && garbage_slot >= slot) {
+          log.remove(slot);
         }
       }
-      /*
-      // Perform garbage collection up to `garbage_slot`
-      if (garbage_slot > 0) {
-        // change
-        this.log.keySet().removeIf(slot -> slot <= garbage_slot);
-      } */
+      System.out.println("AFTER Server = " + this.address());
+      System.out.println("   Server = " + this.address() + "  logs = " + this.log);
+      System.out.println("   Server = " + this.address() + "  slot_in = " + this.slot_in + " slot_out = " + this.slot_out + " ballot = " + this.ballot);
       HeartBeatResponse message = new HeartBeatResponse(latest_Executed_command);
       send(message, sender);
     }
@@ -520,9 +505,6 @@ public class PaxosServer extends Node {
      */
     if (!active && !receivedHeartbeat) {
       System.out.println("Server = " + this.address() + "    \n onHeartbeatCheckTimer0");
-      //System.out.println("Server = " + this.address() + "    \n onHeartbeatCheckTimer1");
-      // server did not receive ping in-between two consecutive timers, so
-      // it tries to become leader
       // possible concern of this.ballot.roundNum() + 1 increasing too far
       this.ballot = new Ballot(this.ballot.roundNum() + 1, this.address());
       P1a message = new P1a(ballot);
@@ -534,7 +516,7 @@ public class PaxosServer extends Node {
     if (receivedHeartbeat) {
       //System.out.println("Server = " + this.address() + "    \n onHeartbeatCheckTimer2");
       receivedHeartbeat = false;
-      set(t, HEARTBEATCHECK_RETRY_MILLIS);
+      this.set(t, HEARTBEATCHECK_RETRY_MILLIS);
     }
   }
 
@@ -628,11 +610,32 @@ public class PaxosServer extends Node {
 
   // used to for garbage collection
   public static int findMinSlot(Map<Address, Integer> latest_Executed_List) {
+
     int min_slot = Integer.MAX_VALUE;
     for (Address x : latest_Executed_List.keySet()) {
       min_slot = Math.min(latest_Executed_List.get(x), min_slot);
     }
     return min_slot;
+  }
+
+  // Update the log of the new leader to have chosen values
+  public static void updateLog(Map<Address, Map<Integer, LogEntry>> seen, Map<Integer, LogEntry> log, AMOApplication app) {
+    for (Map.Entry<Address, Map<Integer, LogEntry>> entry : seen.entrySet()) {
+      Map<Integer, LogEntry> logEntry = entry.getValue();
+
+      for (Map.Entry<Integer, LogEntry> slotEntry : logEntry.entrySet()) {
+        int slot = slotEntry.getKey();
+        LogEntry x = slotEntry.getValue();
+
+
+        if (x.status == PaxosLogSlotStatus.CHOSEN) {
+          if (!log.containsKey(slot) || (log.containsKey(slot) && log.get(slot).status == PaxosLogSlotStatus.ACCEPTED)) {
+            log.put(slot, x);
+            app.execute(x.command);
+          }
+        }
+      }
+    }
   }
 
 
@@ -718,170 +721,29 @@ public class PaxosServer extends Node {
     return result;
   }
 
-  // used to update slot_out whenever a command gets chosen
-  public static int updateSlotOut(int slot_out, int slot_in, Map<Integer, LogEntry> log) {
-    for (int i = slot_out + 1; i < slot_in; i++) {
+  // used to update slot_out whenever a command gets chosen, also execute commands as we are updating
+  public static int updateSlotOut(int slot_out, int slot_in, Map<Integer, LogEntry> log, AMOApplication app) {
+    for (int i = slot_out; i < slot_in; i++) {
+      if (log.containsKey(i) && log.get(i).status == PaxosLogSlotStatus.CHOSEN && log.get(i).command != null) {
+        app.execute(log.get(i).command);
+      }
       if (log.containsKey(i) && log.get(i).status == PaxosLogSlotStatus.ACCEPTED) {
         return i;
       }
     }
     return slot_in;
   }
-}
 
-
-/*
-private void handleP2a(P2a m, Address sender) {
-    System.out.println("Server = " + this.address() + "  ballot = " + this.ballot + "  \n  handleP2a = " + m);
-
-    // Check if the ballot in the P2a is valid (greater than or equal to the current ballot)
-    if (this.ballot.compareTo(m.pvalue().ballot()) <= 0) {
-        // If this server is a leader and receives a P2a from a higher-ballot leader, step down
-        if (active && this.ballot.compareTo(m.pvalue().ballot()) < 0) {
-            active = false;
-            seen = null;
-            proposals = null;
-            set(new HeartbeatCheckTimer(), HEARTBEATCHECK_RETRY_MILLIS);
-        }
-
-        // Update the current ballot to the one in the P2a message
-        this.ballot = m.pvalue().ballot();
-
-        // Handle the log slot associated with this P2a
-        int slot = m.pvalue().slot();
-        LogEntry existingEntry = log.get(slot);
-
-        if (existingEntry != null) {
-            // If the slot already has a CHOSEN status, ignore this P2a
-            if (existingEntry.status == PaxosLogSlotStatus.CHOSEN) {
-                return;
-            }
-
-            // If the slot is ACCEPTED, only update if the new ballot is higher
-            if (existingEntry.status == PaxosLogSlotStatus.ACCEPTED) {
-                if (m.pvalue().ballot().compareTo(existingEntry.ballot) > 0) {
-                    updateLogAndRespond(slot, m, sender);
-                }
-            }
-        } else {
-            // If the slot is new, ensure it aligns with the expected `slot_in`
-            if (slot == slot_in) {
-                slot_in++;
-                updateLogAndRespond(slot, m, sender);
-            }
-        }
-    }
-}
-
-
- * Updates the log for the given slot and sends a P2b response to the sender.
-
-private void updateLogAndRespond(int slot, P2a m, Address sender) {
-  LogEntry entry = new LogEntry(m.pvalue().ballot(), PaxosLogSlotStatus.ACCEPTED, m.pvalue().command());
-  log.put(slot, entry);
-
-  // Create and send the P2b message
-  P2b response = new P2b(m.pvalue().ballot(), m.pvalue());
-  send(response, sender);
-
-  System.out.println("Server = " + this.address() + " updated log and sent P2b for slot " + slot);
-}
-
-
-
-
-
-public static Map<Pvalue, List<Address>> findProposals(Map<Address, Map<Integer, LogEntry>> seen, Ballot server) {
-    int majority = (seen.size() / 2) + 1;
-    int minimum = Integer.MAX_VALUE;
-    int maximum = Integer.MIN_VALUE;
-
-    Map<Pvalue, List<Address>> result = new HashMap<>();
-
-    // Track ballots for each slot
-    Map<Integer, Map<Ballot, Integer>> ballotCounts = new HashMap<>();
-
-    // Determine the range of slots and collect ballot information
-    for (Map.Entry<Address, Map<Integer, LogEntry>> entry : seen.entrySet()) {
-        Map<Integer, LogEntry> log = entry.getValue();
-
-        for (Map.Entry<Integer, LogEntry> slotEntry : log.entrySet()) {
-            int slot = slotEntry.getKey();
-            LogEntry logEntry = slotEntry.getValue();
-
-            minimum = Math.min(minimum, slot);
-            maximum = Math.max(maximum, slot);
-
-            if (logEntry.status == PaxosLogSlotStatus.CHOSEN) {
-                // Skip CHOSEN slots, as they are finalized
-                continue;
-            }
-
-            if (logEntry.status == PaxosLogSlotStatus.ACCEPTED) {
-                ballotCounts
-                        .computeIfAbsent(slot, k -> new HashMap<>())
-                        .merge(logEntry.ballot, 1, Integer::sum);
-            }
-        }
+  public static int updateSlotIn(int slot_in, Map<Integer, LogEntry> log, Map<Pvalue, List<Address>> proposals) {
+    int result = slot_in;
+    for (Pvalue entry : proposals.keySet()) {
+      result = Math.max(result, entry.slot() + 1);
     }
 
-    // Propose for each slot
-    for (int slot = minimum; slot <= maximum; slot++) {
-        Map<Ballot, Integer> ballotMap = ballotCounts.get(slot);
-
-        if (ballotMap == null || ballotMap.isEmpty()) {
-            // If no ballot exists for the slot, propose a No-op
-            result.put(new Pvalue(server, slot, null), new ArrayList<>());
-            continue;
-        }
-
-        // Find the ballot with the highest count or the highest ballot overall
-        Ballot highestBallot = null;
-        boolean hasMajority = false;
-
-        for (Map.Entry<Ballot, Integer> ballotEntry : ballotMap.entrySet()) {
-            Ballot ballot = ballotEntry.getKey();
-            int count = ballotEntry.getValue();
-
-            if (count >= majority) {
-                // Majority ballot found
-                hasMajority = true;
-                highestBallot = ballot;
-                break;
-            }
-
-            if (highestBallot == null || ballot.compareTo(highestBallot) > 0) {
-                highestBallot = ballot;
-            }
-        }
-
-        // Propose based on the highest ballot or majority
-        if (hasMajority) {
-            Command command = null;
-            for (Map.Entry<Address, Map<Integer, LogEntry>> entry : seen.entrySet()) {
-                LogEntry logEntry = entry.getValue().get(slot);
-                if (logEntry != null && logEntry.ballot.equals(highestBallot)) {
-                    command = logEntry.command;
-                    break;
-                }
-            }
-            result.put(new Pvalue(server, slot, command), new ArrayList<>());
-        } else {
-            // Propose based on the highest ballot
-            Command command = null;
-            for (Map.Entry<Address, Map<Integer, LogEntry>> entry : seen.entrySet()) {
-                LogEntry logEntry = entry.getValue().get(slot);
-                if (logEntry != null && logEntry.ballot.equals(highestBallot)) {
-                    command = logEntry.command;
-                    break;
-                }
-            }
-            result.put(new Pvalue(server, slot, command), new ArrayList<>());
-        }
+    for (Integer slot : log.keySet()) {
+      result = Math.max(result, slot + 1);
     }
-
     return result;
+  }
+
 }
-
-
-*/
