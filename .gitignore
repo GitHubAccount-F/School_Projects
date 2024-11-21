@@ -12,6 +12,8 @@
 *.so
 *.a
 
+.icloud
+
 # but always keep the *.a and other files found in solution-binaries
 !**/solution_binaries/*
 
