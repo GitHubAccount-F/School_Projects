@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -200,11 +201,15 @@ public class PaxosServer extends Node {
     ////////// System.out.println("Server = " + this.address() + " \ncommand = " +
     ////////// logSlotNum);
     // if either it was garbage collected or we don't have that log slot
-    if (garbage_slot - 1 >= logSlotNum || !log.containsKey(logSlotNum) ||
+
+    if (status(logSlotNum) == PaxosLogSlotStatus.CLEARED || status(logSlotNum) == PaxosLogSlotStatus.EMPTY) {
+      return null;
+    }
+    /*if (garbage_slot - 1 >= logSlotNum || !log.containsKey(logSlotNum) ||
         status(logSlotNum) == PaxosLogSlotStatus.CLEARED ||
         status(logSlotNum) == PaxosLogSlotStatus.EMPTY) {
       return null;
-    }
+    }*/
     // ////////System.out.println("Server = " + this.address() + " \n slot = " +
     // logSlotNum + " \n command = " + log.get(logSlotNum));
     LogEntry entry = log.get(logSlotNum);
@@ -288,8 +293,24 @@ public class PaxosServer extends Node {
         int slotChosen = slot_in;
         Pvalue pvalue = new Pvalue(this.ballot, slotChosen, m.command());
         // FIX WEIRDNESS HERE
-        if (!this.proposals.containsKey(pvalue)
-            && !this.proposals.containsKey(new Pvalue(this.ballot, slotChosen - 1, m.command()))) {
+
+
+        // makes sure we don't create another proposal with the same command
+        boolean commandNotPresentInProposals = false;
+
+        for (Pvalue check : proposals.keySet()) {
+          if (check.command != null && check.command.equals(m.command()) && check.command.sequenceNum() == m.command().sequenceNum()) {
+            commandNotPresentInProposals = true;
+          }
+        }
+        for (LogEntry entry : log.values()) {
+          if (entry.command != null && entry.command.equals(m.command()) && entry.command.sequenceNum() == m.command().sequenceNum()) {
+            commandNotPresentInProposals = true;
+          }
+        }
+        //if (!this.proposals.containsKey(pvalue) && !commandNotPresentInProposals) {
+
+        if (!this.proposals.containsKey(pvalue) && !commandNotPresentInProposals) {
           slot_in++;
           proposals.put(pvalue, new ArrayList<>());
           P2a message = new P2a(pvalue);
@@ -456,10 +477,21 @@ public class PaxosServer extends Node {
         // update proposals
         //// System.out.println("CURRENT SEENS: " + this.seen);
         proposals = findProposals(seen, this.ballot);
+
         //// System.out.println("CURRENT proposals: " + this.proposals);
         // also update the log so that the new_leader has values that are chosen
         //// System.out.println("CURRENT LOGS: " + this.log);
         updateLog(seen, this.log);
+        Set<Pvalue> slotsToRemove = new HashSet<>();
+        for (Pvalue check : proposals.keySet()) {
+          if (this.log.containsKey(check.slot) && this.log.get(check.slot).status == PaxosLogSlotStatus.CHOSEN) {
+            slotsToRemove.add(check);
+          }
+        }
+        Iterator<Pvalue> itr = slotsToRemove.iterator();
+        while (itr.hasNext()) {
+          proposals.remove(itr.next());
+        }
         //// System.out.println("NEW LOGS: " + this.log);
         // also update slot_in and slot_out
         //// System.out.println("SLOT IN AND SLOT OUT BEFORE " + this.slot_in + " " +
@@ -479,6 +511,7 @@ public class PaxosServer extends Node {
             send(message, server);
           }
         }
+        this.seen = null;
 
       }
     }
@@ -509,7 +542,7 @@ public class PaxosServer extends Node {
         proposals.get(m.slot()).add(sender);
         if (proposals.get(m.slot()).size() >= majority && log.get(m.slot().slot()) != null) {
           Ballot b = log.get(m.slot().slot()).ballot();
-          Command c = log.get(m.slot().slot()).command();
+          AMOCommand c = log.get(m.slot().slot()).command();
           log.put(m.slot().slot(), new LogEntry(b, PaxosLogSlotStatus.CHOSEN, c));
           slot_out = updateSlotOut(this.slot_out, this.slot_in, this.log, this.app);
           // only execute command whenever we increment slot_out
@@ -551,7 +584,7 @@ public class PaxosServer extends Node {
         } else if (m.log().get(slot).status != this.log.get(slot).status) {
           // Update the slot status to CHOSEN if the leader's log marks it as such
           Ballot b = log.get(slot).ballot();
-          Command c = log.get(slot).command();
+          AMOCommand c = log.get(slot).command();
           this.log.put(slot, new LogEntry(b, PaxosLogSlotStatus.CHOSEN, c));
         }
       }
@@ -560,10 +593,15 @@ public class PaxosServer extends Node {
       latest_Executed_command = Math.max(latest_Executed_command, slot_out - 1); // keeps track of the highest executed
       // slot
       // Execute commands for CHOSEN slots and update `slot_out`
+
+      Set<Integer> slotsToRemove = new HashSet<>();
       for (int slot : this.log.keySet()) {
         if (slot_in != slot && garbage_slot >= slot) {
-          log.remove(slot);
+          slotsToRemove.add(slot);
         }
+      }
+      for (Integer integer : slotsToRemove) {
+        this.log.remove(integer);
       }
       // System.out.println("AFTER Server = " + this.address());
       // System.out.println(" Server = " + this.address() + " logs = " + this.log);
@@ -683,6 +721,9 @@ public class PaxosServer extends Node {
     //////// t);
     if (active && proposals.containsKey(t.message().pvalue())
         && proposals.get(t.message().pvalue()).size() < majority) {
+      if (this.log.containsKey(t.message().pvalue().slot) && this.log.get(t.message().pvalue().slot).status == PaxosLogSlotStatus.CHOSEN) {
+        return;
+      }
       for (Address server : servers) {
         send(t.message(), server);
       }
@@ -703,9 +744,9 @@ public class PaxosServer extends Node {
   public static class Pvalue {
     private final Ballot ballot;
     private final int slot;
-    private final Command command;
+    private final AMOCommand command;
 
-    public Pvalue(Ballot ballot, int slot, Command command) {
+    public Pvalue(Ballot ballot, int slot, AMOCommand command) {
       this.ballot = ballot;
       this.slot = slot;
       this.command = command;
@@ -713,14 +754,14 @@ public class PaxosServer extends Node {
   }
 
   @Data
-
+  @Getter
   public static class LogEntry {
-    private final @Getter Ballot ballot;
-    private @Getter PaxosLogSlotStatus status;
+    private final Ballot ballot;
+    private final PaxosLogSlotStatus status;
 
-    private final @Getter Command command;
+    private final AMOCommand command;
 
-    public LogEntry(Ballot ballot, PaxosLogSlotStatus status, Command command) {
+    public LogEntry(Ballot ballot, PaxosLogSlotStatus status, AMOCommand command) {
       this.ballot = ballot;
       this.status = status;
       this.command = command;
@@ -795,7 +836,7 @@ public class PaxosServer extends Node {
     }
 
     // Propose for each slot
-    for (int i = minimum; (i <= maximum && i != minimum); i++) {
+    for (int i = minimum; i <= maximum; i++) {
       Map<Ballot, Integer> ballotMap = ballotCounts.get(i);
 
       if (ballotMap == null) {
@@ -823,7 +864,7 @@ public class PaxosServer extends Node {
       }
 
       // Propose based on the highest ballot or majority
-      Command command = null;
+      AMOCommand command = null;
       for (Map.Entry<Address, Map<Integer, LogEntry>> entry : seen.entrySet()) {
         LogEntry logEntry = entry.getValue().get(i);
         if (logEntry != null && logEntry.ballot.equals(highestBallot)) {
@@ -842,6 +883,10 @@ public class PaxosServer extends Node {
   public static int updateSlotOut(int slot_out, int slot_in, Map<Integer, LogEntry> log, AMOApplication app) {
     boolean stopExecute = false;
     for (int i = slot_out; i < slot_in; i++) {
+      // missing space in log, stop here
+      if (!log.containsKey(i)) {
+        return i;
+      }
       if (log.containsKey(i) && log.get(i).status == PaxosLogSlotStatus.CHOSEN && log.get(i).command != null) {
         // we want to make sure all commands before this one was executed
         if (i == 1) {
