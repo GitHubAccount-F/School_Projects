@@ -1,0 +1,14 @@
+# Verify cases where we don't expect any flights to return. Output should
+# indicate the search failed
+
+# commands to execute:
+search "Seattle WA" "Seattle WA" 1 1 10
+search "Seattle WA" "Boston MA" 1 1 -1
+quit
+*
+
+# expected output:
+No flights match your selection
+Failed to search
+Goodbye
+*

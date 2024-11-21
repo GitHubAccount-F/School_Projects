@@ -1,0 +1,15 @@
+# Verify that logging in with a username that doesn't exist shouldn't work
+
+# commands to execute:
+create user1 user1 100
+create user2 user2 100
+login use1r user1
+quit
+*
+
+# expected output:
+Created user user1
+Created user user2
+Login failed
+Goodbye
+*

@@ -1,0 +1,16 @@
+# Verify that creating multiple accounts with
+# different usernames can be created
+
+# commands to execute:
+create user1 user1 100
+create user2 boo 100
+create user3 boo 100
+quit
+*
+
+# expected output from those commands:
+Created user user1
+Created user user2
+Created user user3
+Goodbye
+*

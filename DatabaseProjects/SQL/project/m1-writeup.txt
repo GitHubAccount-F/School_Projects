@@ -1,0 +1,15 @@
+1) One thing I learned was how to use Prepared Statements for 
+    sql queries.
+2) One thing that surprised me was when creating random salts,
+   there was a class called Secure Random that gave me bytes/salts to
+   use for my passwords. I never knew this kind of class existed.
+3) One question I have is if there are other ways of preventing
+    sql injections instead of using prepared statements?
+4) I did something similar to my debug method that I described earlier.
+5) A bug I noticed was in my prepared statements. I didn't account for spacing,
+   which ended up having my queries looking like "ANDWHERE ...". I noticed
+   an error coming from the tests describing a problem with the query. I scanned 
+   over it a couple times, missing the problem. So I put my query in the Azure
+   query editor and found my syntax errors immedtiately. 
+6) Possibly a way to logout and switch users inside of an instance of Query.java.
+7) Around 15 hours. Collarborated with 0 students. 

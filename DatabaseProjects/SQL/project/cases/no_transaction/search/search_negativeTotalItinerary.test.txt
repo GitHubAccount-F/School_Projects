@@ -1,0 +1,12 @@
+# Verify case where we are given a negative number for total Itineraries
+# to print. Output should indicate search failed. 
+
+# commands to execute:
+search "Seattle WA" "Boston MA" 1 1 -1
+quit
+*
+
+# expected output:
+Failed to search
+Goodbye
+*

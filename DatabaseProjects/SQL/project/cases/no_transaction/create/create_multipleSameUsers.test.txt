@@ -1,0 +1,14 @@
+# Verify that creating multiple accounts with
+# same username doesn't work
+
+# commands to execute:
+create user1 user1 100
+create user1 boo 100
+quit
+*
+
+# expected output from those commands:
+Created user user1
+Failed to create user
+Goodbye
+*
