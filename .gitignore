@@ -26,3 +26,70 @@
 
 # OS X finder files (doesn't happen on linux, but sometimes useful)
 .DS_Store
+
+
+# Node.js dependencies
+/node_modules/
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Java build files
+*.class
+*.jar
+*.war
+*.ear
+
+# Visual Studio Code workspace settings
+.vscode/
+
+# MacOS system files
+.DS_Store
+
+# Windows system files
+Thumbs.db
+Desktop.ini
+
+# Log files
+*.log
+
+# Environment variables (add your own .env file if used)
+.env
+
+# npm packages
+package-lock.json
+
+# .idea folder (JetBrains IDEs like IntelliJ, WebStorm)
+.idea/
+
+# Coverage folder (code coverage tools)
+coverage/
+
+# Testing (e.g., Jest, Mocha)
+*.test.js
+*.spec.js
+
+# Build output (e.g., from Webpack, Grunt, etc.)
+/dist/
+/build/
+
+# Docker
+*.docker
+
+# GitHub Actions workflows output
+*.yml
+
+# JavaScript / TypeScript
+*.js.map
+*.ts.map
+
+# General IDE settings (e.g., IntelliJ, Sublime Text)
+*.iml
+.idea/
+
+# User-specific files
+*.swp
+*~
