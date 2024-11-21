@@ -1,1 +1,1 @@
-Repository for School Projects
+Repository for both personal and school Projects 
