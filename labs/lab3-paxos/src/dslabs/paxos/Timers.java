@@ -19,15 +19,15 @@ final class HeartbeatCheckTimer implements Timer {
 
 @Data
 final class HeartbeatSenderTimer implements Timer {
-  static final int HEARTBEATSENDER_RETRY_MILLIS = 49;
+  static final int HEARTBEATSENDER_RETRY_MILLIS = 75;
 }
 @Data
 final class P1aTimer implements Timer {
-  static final int P1aTimer_RETRY_MILLIS = 100;
+  static final int P1aTimer_RETRY_MILLIS = 50;
   private final P1a p1a;
 }
 @Data
 final class P2aTimer implements Timer {
-  static final int P2aTimer_RETRY_MILLIS = 100;
+  static final int P2aTimer_RETRY_MILLIS = 50;
   private final P2a message;
 }

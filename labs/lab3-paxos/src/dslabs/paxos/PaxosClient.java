@@ -31,6 +31,7 @@ public final class PaxosClient extends Node implements Client {
     sequenceNum = 0;
     command = null;
     result = null;
+    ////System.out.println(this.servers);
   }
 
   @Override
@@ -43,11 +44,11 @@ public final class PaxosClient extends Node implements Client {
    * ---------------------------------------------------------------------------------------------*/
   @Override
   public synchronized void sendCommand(Command operation) {
-    System.out.println("CLIENT sendCommand");
+    //System.out.println("CLIENT sendCommand");
     // Your code here...
     if (operation != null) {
       this.command = operation;
-      AMOCommand com = new AMOCommand(command, sequenceNum, address());
+      AMOCommand com = new AMOCommand(this.command, this.sequenceNum, this.address());
       PaxosRequest req = new PaxosRequest(com);
       result = null;
 
@@ -85,7 +86,7 @@ public final class PaxosClient extends Node implements Client {
       increment seqNum (not needed; this is done in sendCommand)
       notify()
      */
-    System.out.println("CLIENT handlePaxosReply  " + m + " and seq = " + sequenceNum);
+    //System.out.println("CLIENT handlePaxosReply  " + m + " and seq = " + sequenceNum);
     if (this.sequenceNum == m.result().sequenceNum()) {
       result = m.result().result();
       notify();
@@ -104,7 +105,7 @@ public final class PaxosClient extends Node implements Client {
       reset timer
      */
     if (this.sequenceNum == t.sequenceNumber() && result == null) {
-      AMOCommand com = new AMOCommand(command, sequenceNum, address());
+      AMOCommand com = new AMOCommand(this.command, this.sequenceNum, this.address());
       PaxosRequest req = new PaxosRequest(com);
       for (Address server : servers) {
         this.send(req, server);
