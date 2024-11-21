@@ -1,0 +1,40 @@
+#Tests Dijkstra's Algorithm on a complex example
+
+#Creates a graph
+CreateGraph graph1
+
+#Adds nodes
+AddNode graph1 one
+AddNode graph1 two
+AddNode graph1 three
+AddNode graph1 four
+AddNode graph1 five
+AddNode graph1 six
+
+#Adds edges
+AddEdge graph1 one two 4
+AddEdge graph1 two one 4
+AddEdge graph1 two one 1
+
+AddEdge graph1 one three 4
+AddEdge graph1 three one 4
+
+AddEdge graph1 one four 4
+AddEdge graph1 four one 4
+
+AddEdge graph1 three five 4
+AddEdge graph1 five three 4
+
+AddEdge graph1 four five 10
+AddEdge graph1 five four 10
+
+#Finds the least costly paths
+FindPath graph1 three six
+
+FindPath graph1 five two
+
+FindPath graph1 four five
+
+FindPath graph1 two one
+
+FindPath graph1 eight seven

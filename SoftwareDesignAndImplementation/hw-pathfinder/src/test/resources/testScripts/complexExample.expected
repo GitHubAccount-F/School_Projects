@@ -1,0 +1,50 @@
+#Tests Dijkstra's Algorithm on a complex example
+
+#Creates a graph
+created graph graph1
+
+#Adds nodes
+added node one to graph1
+added node two to graph1
+added node three to graph1
+added node four to graph1
+added node five to graph1
+added node six to graph1
+
+#Adds edges
+added edge 4.000 from one to two in graph1
+added edge 4.000 from two to one in graph1
+added edge 1.000 from two to one in graph1
+
+added edge 4.000 from one to three in graph1
+added edge 4.000 from three to one in graph1
+
+added edge 4.000 from one to four in graph1
+added edge 4.000 from four to one in graph1
+
+added edge 4.000 from three to five in graph1
+added edge 4.000 from five to three in graph1
+
+added edge 10.000 from four to five in graph1
+added edge 10.000 from five to four in graph1
+
+#Finds the least costly paths
+path from three to six:
+no path found
+
+path from five to two:
+five to three with weight 4.000
+three to one with weight 4.000
+one to two with weight 4.000
+total cost: 12.000
+
+path from four to five:
+four to five with weight 10.000
+total cost: 10.000
+
+path from two to one:
+two to one with weight 1.000
+total cost: 1.000
+
+unknown: eight
+unknown: seven

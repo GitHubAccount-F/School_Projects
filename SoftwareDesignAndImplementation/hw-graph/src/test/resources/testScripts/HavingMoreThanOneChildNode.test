@@ -1,0 +1,24 @@
+#Tests to see if a parent node can have multiple child nodes
+
+#Creates empty graphs
+CreateGraph graph1
+CreateGraph graph2
+CreateGraph graph3
+
+#Adds multiple nodes
+AddNode graph1 one
+AddNode graph2 one
+AddNode graph2 two
+AddNode graph3 one
+AddNode graph3 two
+AddNode graph3 three
+
+#Creates multiple edges
+AddEdge graph2 one two e1
+AddEdge graph3 one two e1
+AddEdge graph3 one three e1
+
+#Checks to see if there are multiple child nodes
+ListChildren graph1 one
+ListChildren graph2 one
+ListChildren graph3 one

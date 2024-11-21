@@ -1,0 +1,28 @@
+#Tests Dijkstra's algorithm on a graph with two different paths to
+#a target node, with each path have a different cost.
+
+#Create graph
+created graph graph1
+
+#Add nodes
+added node one to graph1
+added node two to graph1
+added node three to graph1
+added node four to graph1
+
+#Adds edges
+added edge 5.250 from one to two in graph1
+added edge 5.250 from two to three in graph1
+added edge 5.250 from three to four in graph1
+added edge 12.670 from one to four in graph1
+added edge 20.000 from one to three in graph1
+
+#Finds the least costly path
+path from one to four:
+one to four with weight 12.670
+total cost: 12.670
+
+path from one to three:
+one to two with weight 5.250
+two to three with weight 5.250
+total cost: 10.500

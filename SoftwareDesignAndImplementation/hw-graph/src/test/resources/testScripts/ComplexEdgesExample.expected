@@ -1,0 +1,35 @@
+#Tests to see if a node can have an edge point to
+#itself, has a bidirectional edge with multiple nodes,
+#has a child node, and has a parent node.
+
+#Creates an empty graph
+created graph graph1
+
+#Adds nodes
+added node a to graph1
+added node b to graph1
+added node c to graph1
+added node d to graph1
+added node e to graph1
+
+#Adds edges
+added edge e1 from a to a in graph1
+added edge e2 from a to b in graph1
+added edge e3 from a to c in graph1
+added edge e4 from a to d in graph1
+added edge e5 from e to a in graph1
+added edge e6 from b to a in graph1
+added edge e7 from c to a in graph1
+
+#Checks the child nodes to confirm test.
+#a forms bi-directional edges with b and c,
+#e is the parent node of a,
+#and d is the child node of a.
+the children of a in graph1 are: a(e1) b(e2) c(e3) d(e4)
+the children of b in graph1 are: a(e6)
+the children of c in graph1 are: a(e7)
+the children of d in graph1 are:
+the children of e in graph1 are: a(e5)
+
+#Lists the nodes
+graph1 contains: a b c d e

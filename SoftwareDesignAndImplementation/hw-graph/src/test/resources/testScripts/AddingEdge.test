@@ -1,0 +1,22 @@
+#Tests to see if edges were added properly between two nodes
+
+#Creates empty graphs
+CreateGraph graph1
+CreateGraph graph2
+
+#Adds nodes to graphs
+AddNode graph1 one
+AddNode graph1 two
+AddNode graph2 one
+AddNode graph2 two
+
+#Lists the nodes
+ListNodes graph1
+ListNodes graph2
+
+#Adds the edge(s)
+AddEdge graph2 one two e1
+
+#Check to see if edges were added
+ListChildren graph1 one
+ListChildren graph2 one

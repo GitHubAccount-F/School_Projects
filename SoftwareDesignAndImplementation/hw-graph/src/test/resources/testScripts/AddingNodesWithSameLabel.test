@@ -1,0 +1,22 @@
+#This tests that when adding multiple nodes
+#with the same label inside of a graph,
+#it will only keep the first that was added
+#and disregard any other attempts at adding a similar one
+
+#Creates empty graphs
+CreateGraph graph1
+CreateGraph graph2
+CreateGraph graph3
+
+#Adds nodes to graphs
+AddNode graph1 one
+AddNode graph2 one
+AddNode graph2 one
+AddNode graph3 one
+AddNode graph3 one
+AddNode graph3 ONE
+
+#Checks nodes inside of a graph
+ListNodes graph1
+ListNodes graph2
+ListNodes graph3

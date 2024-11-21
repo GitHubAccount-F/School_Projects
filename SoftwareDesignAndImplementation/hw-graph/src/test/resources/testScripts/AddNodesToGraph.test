@@ -1,0 +1,16 @@
+#Tests to see if nodes are added successfully
+
+#Creates empty graphs
+CreateGraph graph1
+CreateGraph graph2
+CreateGraph graph3
+
+#Adds nodes to the graphs
+AddNode graph2 one
+AddNode graph3 one
+AddNode graph3 two
+
+#Lists the nodes in the graphs
+ListNodes graph1
+ListNodes graph2
+ListNodes graph3

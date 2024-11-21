@@ -1,0 +1,6 @@
+Briefly list any changes you made to your graph class during hw-marvel,
+and why you made those changes.
+
+I added a method called containsNode() that checks if a graph contains a certain node. I did
+this to quickly check if a graph has a certain node rather than searching through a whole list of nodes.
+This helped in finding cases where an unknown Marvel character was given.

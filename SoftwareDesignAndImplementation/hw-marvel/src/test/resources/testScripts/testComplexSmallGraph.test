@@ -1,0 +1,15 @@
+#Tests the FindPath on a small complex graph
+
+#Creates graph
+LoadGraph graph1 complexSmallGraph.csv
+
+#Find's the path between characters
+FindPath graph1 SpiderMan GhostRider
+
+FindPath graph1 Galactus Hulk
+
+FindPath graph1 Thor Venom
+
+FindPath graph1 BlackPanther Loki
+
+FindPath graph1 Storm Storm

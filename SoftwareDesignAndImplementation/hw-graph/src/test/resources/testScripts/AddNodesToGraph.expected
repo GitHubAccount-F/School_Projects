@@ -1,0 +1,16 @@
+#Tests to see if nodes are added successfully
+
+#Creates empty graphs
+created graph graph1
+created graph graph2
+created graph graph3
+
+#Adds nodes to the graphs
+added node one to graph2
+added node one to graph3
+added node two to graph3
+
+#Lists the nodes in the graphs
+graph1 contains:
+graph2 contains: one
+graph3 contains: one two

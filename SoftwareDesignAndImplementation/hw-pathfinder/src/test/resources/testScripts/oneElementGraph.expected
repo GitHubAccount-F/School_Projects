@@ -1,0 +1,14 @@
+#Tests the Dijkstra's algorithm with a one element graph
+
+#Creates the graph
+created graph graph1
+
+#Adds a node
+added node one to graph1
+
+#Finds a path between two different nodes
+unknown: two
+
+#Finds a path to the same node
+path from one to one:
+total cost: 0.000

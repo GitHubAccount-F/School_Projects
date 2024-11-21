@@ -1,0 +1,8 @@
+#Tests when the graph contains no elements
+
+#Creates the graph
+created graph graph1
+
+#Finds a path, where there shouldn't be any
+unknown: Hero
+unknown: Villian

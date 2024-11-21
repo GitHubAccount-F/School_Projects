@@ -1,0 +1,22 @@
+#Tests to see if edges were added properly between two nodes
+
+#Creates empty graphs
+created graph graph1
+created graph graph2
+
+#Adds nodes to graphs
+added node one to graph1
+added node two to graph1
+added node one to graph2
+added node two to graph2
+
+#Lists the nodes
+graph1 contains: one two
+graph2 contains: one two
+
+#Adds the edge(s)
+added edge e1 from one to two in graph2
+
+#Check to see if edges were added
+the children of one in graph1 are:
+the children of one in graph2 are: two(e1)

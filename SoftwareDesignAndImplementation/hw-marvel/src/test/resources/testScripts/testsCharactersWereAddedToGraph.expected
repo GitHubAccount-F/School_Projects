@@ -1,0 +1,13 @@
+#Tests to make sure Marvel characters are added to a graph
+
+#Creates graph
+loaded graph graph2
+loaded graph graph3
+#Complex example
+loaded graph graph4
+
+
+#Checks if the characters were added to the graph
+graph2 contains: SpiderMan
+graph3 contains: Carnage Venom
+graph4 contains: CaptainAmerica IronMan SpiderMan Thor Venom

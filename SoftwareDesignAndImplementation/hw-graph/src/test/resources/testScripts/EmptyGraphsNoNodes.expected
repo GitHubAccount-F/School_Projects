@@ -1,0 +1,9 @@
+#Tests to see if empty graphs contain no nodes
+
+#Creates two empty graphs
+created graph graph1
+created graph graph2
+
+#Lists out the nodes inside the two graphs
+graph1 contains:
+graph2 contains:

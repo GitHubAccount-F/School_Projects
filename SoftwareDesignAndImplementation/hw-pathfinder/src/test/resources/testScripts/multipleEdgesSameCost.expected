@@ -1,0 +1,18 @@
+#Tests Dijkstra's algorithm given edges with the same
+#cost
+
+#Creates graph
+created graph graph1
+
+#Adds nodes
+added node one to graph1
+added node two to graph1
+
+#Adds Edges
+added edge 7.500 from one to two in graph1
+added edge 7.500 from one to two in graph1
+
+#Finds path
+path from one to two:
+one to two with weight 7.500
+total cost: 7.500

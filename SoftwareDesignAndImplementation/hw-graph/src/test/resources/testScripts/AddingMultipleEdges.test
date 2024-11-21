@@ -1,0 +1,24 @@
+#Tests to see if multiple edges can be added between two nodes
+
+#Creates empty graphs
+CreateGraph graph1
+CreateGraph graph2
+CreateGraph graph3
+
+#Adds nodes to graphs
+AddNode graph1 one
+AddNode graph1 two
+AddNode graph2 one
+AddNode graph2 two
+AddNode graph3 one
+AddNode graph3 two
+
+#Adds the edge
+AddEdge graph2 one two e1
+AddEdge graph3 one two e1
+AddEdge graph3 one two e2
+
+#Check to see if edge was added
+ListChildren graph1 one
+ListChildren graph2 one
+ListChildren graph3 one

@@ -1,0 +1,23 @@
+#Tests when given a csv file, in proper format,
+#but there exists no path between any of the characters
+
+#Loads in a graph
+LoadGraph graph1 noHerosInSameComicBook.csv
+
+#Finds a path, but the path shouldn't exist
+FindPath graph1 SpiderMan Hulk
+
+#Finds another path, that shouldn't exist
+FindPath graph1 SpiderMan Scarlet-Witch
+
+#Finds another but characters don't exist in graph, so path
+#shouldn't exist and message should pop out
+FindPath graph1 BatMan SuperMan
+
+#Finds another path to itself, which should exist
+FindPath graph1 Wolverine Wolverine
+
+
+#Tests to make sure no children are found.
+ListChildren graph1 SpiderMan
+ListChildren graph1 Hulk

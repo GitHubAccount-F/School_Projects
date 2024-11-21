@@ -1,0 +1,13 @@
+#Tests the Dijkstra's algorithm with a one element graph
+
+#Creates the graph
+CreateGraph graph1
+
+#Adds a node
+AddNode graph1 one
+
+#Finds a path between two different nodes
+FindPath graph1 one two
+
+#Finds a path to the same node
+FindPath graph1 one one

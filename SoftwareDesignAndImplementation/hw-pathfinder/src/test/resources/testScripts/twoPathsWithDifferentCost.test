@@ -1,0 +1,23 @@
+#Tests Dijkstra's algorithm on a graph with two different paths to
+#a target node, with each path have a different cost.
+
+#Create graph
+CreateGraph graph1
+
+#Add nodes
+AddNode graph1 one
+AddNode graph1 two
+AddNode graph1 three
+AddNode graph1 four
+
+#Adds edges
+AddEdge graph1 one two 5.25
+AddEdge graph1 two three 5.25
+AddEdge graph1 three four 5.25
+AddEdge graph1 one four 12.67
+AddEdge graph1 one three 20
+
+#Finds the least costly path
+FindPath graph1 one four
+
+FindPath graph1 one three

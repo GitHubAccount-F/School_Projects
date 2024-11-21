@@ -1,0 +1,29 @@
+#Tests to see that when adding an edge between
+#two nodes, that if the edge is already present, then
+#it won't be added.
+
+#Creates empty graphs
+CreateGraph graph1
+CreateGraph graph2
+CreateGraph graph3
+
+#Adds nodes to graphs
+AddNode graph1 one
+AddNode graph1 two
+AddNode graph2 one
+AddNode graph2 two
+AddNode graph3 one
+AddNode graph3 two
+
+#Adds the edge
+AddEdge graph1 one two e1
+AddEdge graph2 one two e1
+AddEdge graph2 one two e1
+AddEdge graph3 one two e1
+AddEdge graph3 one two e1
+AddEdge graph3 one two e2
+
+#Check to see if edge was added
+ListChildren graph1 one
+ListChildren graph2 one
+ListChildren graph3 one

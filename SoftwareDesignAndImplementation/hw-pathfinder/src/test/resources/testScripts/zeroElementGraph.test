@@ -1,0 +1,7 @@
+#Tests when the graph contains no elements
+
+#Creates the graph
+CreateGraph graph1
+
+#Finds a path, where there shouldn't be any
+FindPath graph1 Hero Villian

@@ -1,0 +1,33 @@
+## CSE 331 hw-graph Part 1 Questions
+
+## Part 1
+###########################################################################
+
+Briefly explain why you included the operations you did and why you feel they are a sufficient
+interface to a graph. If your design includes multiple classes or interfaces, explain why you
+included each one; if not, explain whether you considered additional classes and why you decided
+not to include them.
+
+For my graph adt, the operations I included were creating an empty graph, adding nodes, adding edges, getting child
+nodes, getting parent nodes, returning all nodes in a graph, getting all edges pointing to a node or pointing out
+from a node, and getting the edges in-between two nodes. I feel these are the basic methods needed for a functional
+graph where you have to create it, add new nodes/edges to it, and retrieving information from it.
+I chose to have multiple classes because I felt nodes and graphs were its own abstract ideas, so I thought it
+would be better to make a class for each. Also, nodes and graphs do their own unique operations, so separating
+them would be better for clarity.
+
+
+## Part 2
+###########################################################################
+
+What was your testing strategy for this assignment? How do your script tests and JUnit tests
+differ from each other (if they do), and why?
+
+My testing strategy for this assignment is to essentially test the behaviors/methods of my
+classes with multiple tests that start as simple and git slightly more complex; For example,
+I try tests with 0 nodes, 1 nodes, and 2 nodes. I then occasionally add in tests unrelated to
+my methods that make sure the classes are working properly. My script tests are used to test the
+behaviors of my Graph class. My Junit tests are mostly used for testing methods in my Node
+class and other methods I couldn't test in script test for my Graph class. I did it this way
+to ensure my node class works(which my Graph class relies on) and it's easier
+to test the behaviors of my Graph class in script test.

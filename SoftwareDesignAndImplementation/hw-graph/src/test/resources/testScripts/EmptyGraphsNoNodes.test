@@ -1,0 +1,9 @@
+#Tests to see if empty graphs contain no nodes
+
+#Creates two empty graphs
+CreateGraph graph1
+CreateGraph graph2
+
+#Lists out the nodes inside the two graphs
+ListNodes graph1
+ListNodes graph2

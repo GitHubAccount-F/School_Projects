@@ -1,0 +1,34 @@
+#Tests Dijkstra's algorithm when there is multiple edges with different costs
+#between two nodes
+
+#Creates the graphs
+CreateGraph graph1
+CreateGraph graph2
+
+#Adds nodes to the graphs
+AddNode graph1 one
+AddNode graph1 two
+AddNode graph1 three
+
+AddNode graph2 one
+AddNode graph2 two
+AddNode graph2 three
+
+#Adds multiple edges between each node
+AddEdge graph1 one two 5
+AddEdge graph1 one two 4
+AddEdge graph1 two three 2
+AddEdge graph1 two three 3
+
+AddEdge graph2 one two 5
+AddEdge graph2 one two 4
+AddEdge graph2 one two 1
+AddEdge graph2 two three 3
+AddEdge graph2 two three 7
+AddEdge graph2 two three 6
+
+
+#Finds the paths with the lowest cost between two nodes:
+FindPath graph1 one three
+
+FindPath graph2 one three

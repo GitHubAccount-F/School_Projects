@@ -1,0 +1,25 @@
+#Tests the FindPath on a small complex graph
+
+#Creates graph
+loaded graph graph1
+
+#Find's the path between characters
+path from SpiderMan to GhostRider:
+SpiderMan to CaptainAmerica via Civil-War
+CaptainAmerica to Hulk via Ragnarok
+Hulk to Magneto via X-Men
+Magneto to GhostRider via Apocalypse
+
+path from Galactus to Hulk:
+no path found
+
+path from Thor to Venom:
+Thor to CaptainAmerica via Ragnarok
+CaptainAmerica to SpiderMan via Civil-War
+SpiderMan to Venom via Spider-Verse
+
+path from BlackPanther to Loki:
+BlackPanther to CaptainAmerica via Civil-War
+CaptainAmerica to Loki via Ragnarok
+
+path from Storm to Storm:

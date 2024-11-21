@@ -1,0 +1,35 @@
+#Tests Dijkstra's Algorithm when there is three
+#possible paths to a target node
+
+#Creates graph
+created graph graph1
+
+#Adds the nodes
+added node one to graph1
+added node two to graph1
+added node three to graph1
+added node four to graph1
+added node five to graph1
+added node six to graph1
+added node seven to graph1
+added node eight to graph1
+
+#Adds edges
+added edge 20.000 from one to eight in graph1
+added edge 4.000 from one to two in graph1
+added edge 4.000 from two to three in graph1
+added edge 4.000 from three to eight in graph1
+added edge 2.000 from one to four in graph1
+added edge 2.000 from four to five in graph1
+added edge 2.000 from five to six in graph1
+added edge 2.000 from six to seven in graph1
+added edge 2.000 from seven to eight in graph1
+
+#Finds the least costly path
+path from one to eight:
+one to four with weight 2.000
+four to five with weight 2.000
+five to six with weight 2.000
+six to seven with weight 2.000
+seven to eight with weight 2.000
+total cost: 10.000

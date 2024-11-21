@@ -1,0 +1,29 @@
+#Tests Dijkstra's Algorithm when there is three
+#possible paths to a target node
+
+#Creates graph
+CreateGraph graph1
+
+#Adds the nodes
+AddNode graph1 one
+AddNode graph1 two
+AddNode graph1 three
+AddNode graph1 four
+AddNode graph1 five
+AddNode graph1 six
+AddNode graph1 seven
+AddNode graph1 eight
+
+#Adds edges
+AddEdge graph1 one eight 20
+AddEdge graph1 one two 4
+AddEdge graph1 two three 4
+AddEdge graph1 three eight 4
+AddEdge graph1 one four 2
+AddEdge graph1 four five 2
+AddEdge graph1 five six 2
+AddEdge graph1 six seven 2
+AddEdge graph1 seven eight 2
+
+#Finds the least costly path
+FindPath graph1 one eight

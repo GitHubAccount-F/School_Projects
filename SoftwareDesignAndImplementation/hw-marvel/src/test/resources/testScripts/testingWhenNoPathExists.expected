@@ -1,0 +1,26 @@
+#Tests when given a csv file, in proper format,
+#but there exists no path between any of the characters
+
+#Loads in a graph
+loaded graph graph1
+
+#Finds a path, but the path shouldn't exist
+path from SpiderMan to Hulk:
+no path found
+
+#Finds another path, that shouldn't exist
+path from SpiderMan to Scarlet-Witch:
+no path found
+
+#Finds another but characters don't exist in graph, so path
+#shouldn't exist and message should pop out
+unknown: BatMan
+unknown: SuperMan
+
+#Finds another path to itself, which should exist
+path from Wolverine to Wolverine:
+
+
+#Tests to make sure no children are found.
+the children of SpiderMan in graph1 are:
+the children of Hulk in graph1 are:

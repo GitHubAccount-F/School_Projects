@@ -1,0 +1,57 @@
+## CSE 331 hw-graph Part 2 Questions
+
+NOTE: This file is used as part of hw-graph-part2, and is not due as part of the hw-graph-part1
+submission. You may leave it blank for hw-graph-part1.
+
+## Part 1
+###########################################################################
+
+A few examples of possible Graph representations:
+
+    A: A collection of nodes and a collection of edges.
+    B: An adjacency list, in which each node is associated with a list of its outgoing edges.
+    C: An adjacency matrix, which explicitly represents, for every pair ⟨A,B⟩ of nodes, whether there 
+       is a link from A to B, and how many.
+
+1. In two or three sentences, explain an advantage and a disadvantage of each of the
+representations listed above (for example, in terms of runtime complexity, space
+complexity, or ease of implementation).
+
+Representation C makes it quick to find the number of edges between two nodes, but
+can lead to unnecessary calculations for nodes that don't have edges between them(waste of space).
+Representation B is easy to implement due to how it just involves adding elements to a list,
+but it's takes longer to find if there's an edge between two nodes.
+Representation A is easy to implement because we just simply add elements to collections,
+but may take a while to traverse and find nodes.
+
+
+2. In two to three sentences, describe the representation you chose and explain why you
+chose it. If you chose to use a different representation than one of the three we described
+above, be sure to list its advantages and disadvantages, too.
+
+I chose a representation similar to an adjacency lists but with a map. My keys are node
+labels, with each value of a key being a Node object that stores the edges to child nodes. I choose this
+representation because it's quick to add new edges/nodes, and it worked well with what I intuitively
+had in mind for making a Graph class.
+
+
+## Part 4
+###########################################################################
+
+    (Please keep your answers brief and to-the-point.)
+
+1. Describe any new tests you added and why you added them, or why you feel that your original
+tests alone are sufficient.
+I added new tests after finishing my implementations to test dealing with unexpected behaviors(such as
+user giving wrong/null inputs). Also, I changed my specifications such as allowing labels to be case-sensitive,
+so I tested this to make sure my classes allowed this.
+
+
+
+2. Did you make any changes to your specifications as you were implementing your Graph? (yes/no)
+If yes, describe your changes and why you made them.
+Yes, I made changes to my specification that made implementing easier and made my code run faster.
+For example, I changed my specifications to only deal with checking if labels were exactly the same
+instead of what I previously had where I would have to check if labels were the same word(ignoring capitalization).
+
+

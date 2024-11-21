@@ -1,0 +1,11 @@
+#Tests my algorithms with the example csv given
+
+#Creates graph
+loaded graph graph1
+
+#Finds paths
+path from Ernst-the-Bicycling-Wizard to Grossman-the-Youngest-of-them-all:
+Ernst-the-Bicycling-Wizard to Grossman-the-Youngest-of-them-all via CSE331
+
+path from Perkins-the-Magical-Singing-Instructor to Ernst-the-Bicycling-Wizard:
+Perkins-the-Magical-Singing-Instructor to Ernst-the-Bicycling-Wizard via CSE331

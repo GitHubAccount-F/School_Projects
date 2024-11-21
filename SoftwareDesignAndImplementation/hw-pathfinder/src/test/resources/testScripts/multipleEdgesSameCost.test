@@ -1,0 +1,16 @@
+#Tests Dijkstra's algorithm given edges with the same
+#cost
+
+#Creates graph
+CreateGraph graph1
+
+#Adds nodes
+AddNode graph1 one
+AddNode graph1 two
+
+#Adds Edges
+AddEdge graph1 one two 7.5
+AddEdge graph1 one two 7.5
+
+#Finds path
+FindPath graph1 one two

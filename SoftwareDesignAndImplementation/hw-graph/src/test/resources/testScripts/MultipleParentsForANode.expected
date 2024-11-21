@@ -1,0 +1,39 @@
+#Tests to see that a node
+#can have multiple parent nodes.
+#We also test that this works when a node is
+#in between two other nodes.
+
+#Creates empty graphs
+created graph graph1
+created graph graph2
+created graph graph3
+created graph graph4
+
+#Adds a node
+added node one to graph2
+added node two to graph2
+added node one to graph3
+added node two to graph3
+added node three to graph3
+added node one to graph4
+added node two to graph4
+added node three to graph4
+added node four to graph4
+
+#Adds edges
+added edge e1 from one to two in graph2
+added edge e1 from one to two in graph3
+added edge e1 from three to two in graph3
+added edge e1 from one to three in graph4
+added edge e2 from two to three in graph4
+added edge e3 from three to four in graph4
+
+#Gives information about child nodes, which can use to then see
+#how many parents a node has
+the children of one in graph1 are:
+the children of one in graph2 are: two(e1)
+the children of one in graph3 are: two(e1)
+the children of three in graph3 are: two(e1)
+the children of one in graph4 are: three(e1)
+the children of two in graph4 are: three(e2)
+the children of three in graph4 are: four(e3)

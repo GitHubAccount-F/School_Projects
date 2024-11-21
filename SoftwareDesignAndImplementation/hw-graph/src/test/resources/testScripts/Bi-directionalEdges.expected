@@ -1,0 +1,36 @@
+#Tests to see if two nodes can have bi-directional edges(edges
+#that goes both ways). We also check if this property
+#holds for multiple edges going back and forth between two nodes
+
+#Creates empty graphs
+created graph graph1
+created graph graph2
+created graph graph3
+
+#Adds multiple nodes
+added node one to graph1
+added node two to graph1
+added node one to graph2
+added node two to graph2
+added node one to graph3
+added node two to graph3
+
+#Creates multiple edges
+added edge e1 from one to two in graph1
+added edge e1 from two to one in graph1
+added edge e1 from one to two in graph2
+added edge e1 from two to one in graph2
+added edge e2 from one to two in graph2
+added edge e1 from two to one in graph3
+added edge e1 from one to two in graph3
+added edge e2 from two to one in graph3
+added edge e2 from one to two in graph3
+
+#Checks to see if the bi-directional edges were added,
+#where it creates child nodes in both directions
+the children of one in graph1 are: two(e1)
+the children of two in graph1 are: one(e1)
+the children of one in graph2 are: two(e1) two(e2)
+the children of two in graph2 are: one(e1)
+the children of one in graph3 are: two(e1) two(e2)
+the children of two in graph3 are: one(e1) one(e2)

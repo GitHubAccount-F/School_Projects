@@ -1,0 +1,32 @@
+#Tests to that a node with no edges has no
+#child node(s). Also tests that this applies
+#to any nodes that are child nodes of other nodes.
+
+#Creates empty graphs
+CreateGraph graph1
+CreateGraph graph2
+CreateGraph graph3
+CreateGraph graph4
+
+#Adds nodes
+AddNode graph1 one
+AddNode graph2 one
+AddNode graph2 two
+AddNode graph3 one
+AddNode graph3 two
+AddNode graph3 three
+AddNode graph4 one
+AddNode graph4 two
+
+#Create an edge
+AddEdge graph4 one two e1
+
+#Checks to see the child node
+ListChildren graph1 one
+ListChildren graph2 one
+ListChildren graph2 two
+ListChildren graph3 one
+ListChildren graph3 two
+ListChildren graph3 three
+ListChildren graph4 one
+ListChildren graph4 two

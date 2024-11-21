@@ -1,0 +1,21 @@
+#Tests Dijkstra's algorithm with a graph containing only three
+#nodes, in a straight line path
+
+#Creates the graph
+CreateGraph graph1
+
+#Adds the nodes
+AddNode graph1 one
+AddNode graph1 two
+AddNode graph1 three
+
+#Add edge
+AddEdge graph1 one two 10.0
+AddEdge graph1 two one 10.0
+AddEdge graph1 two three 10.0
+AddEdge graph1 three two 10.0
+
+#Finds a path
+FindPath graph1 one two
+
+FindPath graph1 three one

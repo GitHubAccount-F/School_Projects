@@ -1,0 +1,26 @@
+#Tests if edges properly form in marvel social network
+
+#Creates graphs
+LoadGraph graph1 noHerosInSameComicBook.csv
+LoadGraph graph2 onlyTwoCharactersPerComic.csv
+LoadGraph graph3 directPathInSameComic.csv
+LoadGraph graph4 directPathNotInSameComics.csv
+
+#Checks if edges were created
+#Should produce no edges
+ListChildren graph1 SpiderMan
+ListChildren graph1 Wolverine
+ListChildren graph1 Hulk
+
+#Should have an edge both ways
+ListChildren graph2 SpiderMan
+ListChildren graph2 Venom
+
+#Should produce a single edge
+ListChildren graph2 Hulk
+ListChildren graph4 IronMan
+ListChildren graph4 Thor
+
+#Should have many edges
+ListChildren graph3 SpiderMan
+ListChildren graph3 Carnage

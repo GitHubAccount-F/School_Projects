@@ -1,0 +1,30 @@
+#Tests to see if a node can have an edge
+#incoming and outgoing from itself. Also
+#tests to make sure this applies to nodes connected
+#to other nodes.
+
+#Creates empty graphs
+CreateGraph graph1
+CreateGraph graph2
+CreateGraph graph3
+CreateGraph graph4
+
+#Adds a node
+AddNode graph1 one
+AddNode graph2 one
+AddNode graph3 one
+AddNode graph4 one
+AddNode graph4 two
+
+#Creates an edge
+AddEdge graph2 one one e1
+AddEdge graph3 one one e1
+AddEdge graph3 one one e2
+AddEdge graph4 one one e1
+AddEdge graph4 one two e1
+
+#Checks to see the child node
+ListChildren graph1 one
+ListChildren graph2 one
+ListChildren graph3 one
+ListChildren graph4 one

@@ -1,0 +1,31 @@
+#Tests when there is multiple characters in a comic,
+#but there isn't an edge connecting to characters outside the
+#comic.
+
+#Creates empty graph
+loaded graph graph1
+
+#Checks to make sure all Marvel characters were added
+graph1 contains: Captain-America HawkEye Hulk Iron-Man QuickSilver SpiderMan Thor Venom
+
+#Tests if it can find a path between characters
+#in the same comic(it should)
+path from SpiderMan to Venom:
+SpiderMan to Venom via Spider-Verse
+
+path from Venom to SpiderMan:
+Venom to SpiderMan via Spider-Verse
+
+path from Thor to Hulk:
+Thor to Hulk via Ragnarok
+
+path from HawkEye to QuickSilver:
+HawkEye to QuickSilver via Age-Of-Ultron
+
+#Tests if can find a path between characters in
+#different comics(it shouldn't)
+path from SpiderMan to Thor:
+no path found
+
+path from Hulk to HawkEye:
+no path found

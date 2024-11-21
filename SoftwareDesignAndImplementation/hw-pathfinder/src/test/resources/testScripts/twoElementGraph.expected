@@ -1,0 +1,22 @@
+#Tests Dijkstra's algorithm with a graph containing only two
+#nodes
+
+#Creates the graph
+created graph graph1
+
+#Adds the nodes
+added node one to graph1
+added node two to graph1
+
+#Adds edge
+added edge 10.000 from one to two in graph1
+added edge 10.000 from two to one in graph1
+
+#Finds a path
+path from one to two:
+one to two with weight 10.000
+total cost: 10.000
+
+path from two to one:
+two to one with weight 10.000
+total cost: 10.000

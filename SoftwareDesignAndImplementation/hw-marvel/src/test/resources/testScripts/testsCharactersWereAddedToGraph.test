@@ -1,0 +1,13 @@
+#Tests to make sure Marvel characters are added to a graph
+
+#Creates graph
+LoadGraph graph2 SingleCharacter.csv
+LoadGraph graph3 twoCharacters.csv
+#Complex example
+LoadGraph graph4 directPathNotInSameComics.csv
+
+
+#Checks if the characters were added to the graph
+ListNodes graph2
+ListNodes graph3
+ListNodes graph4

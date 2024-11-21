@@ -1,0 +1,25 @@
+#Tests when there is multiple characters in a comic,
+#but there isn't an edge connecting to characters outside the
+#comic.
+
+#Creates empty graph
+LoadGraph graph1 onlyTwoCharactersPerComic.csv
+
+#Checks to make sure all Marvel characters were added
+ListNodes graph1
+
+#Tests if it can find a path between characters
+#in the same comic(it should)
+FindPath graph1 SpiderMan Venom
+
+FindPath graph1 Venom SpiderMan
+
+FindPath graph1 Thor Hulk
+
+FindPath graph1 HawkEye QuickSilver
+
+#Tests if can find a path between characters in
+#different comics(it shouldn't)
+FindPath graph1 SpiderMan Thor
+
+FindPath graph1 Hulk HawkEye

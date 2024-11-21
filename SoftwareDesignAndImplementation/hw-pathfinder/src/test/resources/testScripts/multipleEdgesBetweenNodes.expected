@@ -1,0 +1,40 @@
+#Tests Dijkstra's algorithm when there is multiple edges with different costs
+#between two nodes
+
+#Creates the graphs
+created graph graph1
+created graph graph2
+
+#Adds nodes to the graphs
+added node one to graph1
+added node two to graph1
+added node three to graph1
+
+added node one to graph2
+added node two to graph2
+added node three to graph2
+
+#Adds multiple edges between each node
+added edge 5.000 from one to two in graph1
+added edge 4.000 from one to two in graph1
+added edge 2.000 from two to three in graph1
+added edge 3.000 from two to three in graph1
+
+added edge 5.000 from one to two in graph2
+added edge 4.000 from one to two in graph2
+added edge 1.000 from one to two in graph2
+added edge 3.000 from two to three in graph2
+added edge 7.000 from two to three in graph2
+added edge 6.000 from two to three in graph2
+
+
+#Finds the paths with the lowest cost between two nodes:
+path from one to three:
+one to two with weight 4.000
+two to three with weight 2.000
+total cost: 6.000
+
+path from one to three:
+one to two with weight 1.000
+two to three with weight 3.000
+total cost: 4.000

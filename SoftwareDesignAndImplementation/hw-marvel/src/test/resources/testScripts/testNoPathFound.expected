@@ -1,0 +1,31 @@
+#Tests when there is not a path found
+
+#Creates graphs
+created graph graph1
+created graph graph2
+created graph graph3
+created graph graph4
+
+#Adds nodes
+added node SpiderMan to graph1
+added node SpiderMan to graph2
+added node Venom to graph2
+added node SpiderMan to graph3
+added node Carnage to graph3
+added node Venom to graph3
+
+#Adds edges
+added edge SpiderVerse from SpiderMan to Venom in graph3
+added edge SpiderVerse from Venom to SpiderMan in graph3
+
+#Finds paths
+unknown: IronMan
+unknown: Hulk
+
+unknown: Hulk
+
+path from SpiderMan to Venom:
+no path found
+
+path from SpiderMan to Carnage:
+no path found

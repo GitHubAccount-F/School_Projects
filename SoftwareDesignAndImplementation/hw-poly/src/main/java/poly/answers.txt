@@ -1,0 +1,197 @@
+## CSE 331 hw-poly Questions
+## Part 0
+###########################################################################
+
+1. Multiplication Pseudocode
+r = p * q;
+    *set r = q_0 * p_0 + q_1 * p_0 + . . . + q_n-1 * p_0
+    *{inv: r = (q_0 * p_0 +. . .+ q_size-1 * p_0) + . . . + (q_0 * p_i +. . .+ q_size-1 * p_i)
+        where p_i is the i-th term in p, and q_i is the i-th term in q}
+    *variable to hold temporary polynomial;
+    *foreach term(p_i) in p besides p_0:
+                *add (p_i * q_0 + . . .+ p_i * q_n-1) to temporary storage
+                *perform add operation(that is given in assignment) between temporary storage and r
+
+
+2. Division Pseudocode
+r = u / q
+    *set v = copy of u(the dividend)
+    *set r = storage to hold the quotient
+    *{inv: original dividend = v(remainder) + r(quotient) * q(divisor)
+    *while the highest degree in the remainder is greater than or equal to the highest degree in the divisor
+        *find a term that when multiplied to the highest
+            degree term in p, it will match the highest degree term in v
+        *multiply that to the divisor(divisor itself will never change)
+        *subtract this polynomial from the remainder
+        *add the term to the quotient that was used to multiply the divisor
+
+
+3. Division Example: (x3+x-1) / (x+1) = x2-x+2
+    u = x3+x-1
+    v = copy of u
+    q = x+1
+    r = 0
+    while(the highest exponent in u is greater than or equal to the highest exponent in q) {
+        *first iteration: r = 0 , v = x3+x-1, q = x + 1
+            multiplication term: x^2
+            temp_q = q * multiplication term = x^3 + x^2
+            v = v - temp_q = -x^2 + x - 1
+            r = x^2
+        *second iteration: r = x^2 , v = -x^2 + x - 1, q = x + 1
+                    multiplication term: -x
+                    temp_q = q * multiplication term = -x^2 - x
+                    v = v - temp_q = 2x + 1
+                    r = x^2  - x
+        *third iteration: r = x^2 - x , v = 2x - 1, q = x + 1
+                    multiplication term: 2
+                    temp_q = q * multiplication term = 2x + 2
+                    v = v - temp_q = -3
+                    r = x^2 - x + 2
+    }
+    r = x^2 - x + 2
+
+
+
+
+## Part 1
+###########################################################################
+
+1. Weakened Rep Invariant
+
+The RatNum(int n, int d) constructor could be changed to not deal with reducing
+the fraction(the spec doesn't say it has to be reduced). An advantage, if we were to change the
+constructor, is that there is less code to perform, which increases efficiency. A disadvantage is
+also related to efficiency because this could result in you storing really large numbers, taking
+up storage. Also, you may have to recalculate the reduced form more than once instead of having
+it done once inside the constructor.
+
+The checkRep() method must be changed to match the new representation invariant.
+Therefore, it should not include tests for if the fraction isn't reduced. Advantage
+of this is there is less code to process, increasing efficiency. A disadvantage
+is that the code will read (6/2) and (3) differently, which leads bugs such as
+in the equals() method.
+
+The equals method must change to account for if two RatNum are equal, but are not in reduced
+forms. For example, the current method won't say (4/2) and 2 are the same, which means we have to reduce them
+inside the method. An advantage of this is you only need to reduce the RatNum with the larger denominator to test if
+they are equal, which is faster than both RatNum being reduced inside their constructor. However, if you repeatedly use
+the same RatNum and have to simplify it again and again, this will decrease code efficiency.
+
+The toString method must change because it must have the RatNum in it's reduced form
+when returning the string. It should need to check and convert it to it's reduced form.
+A disadvantage is that you may need to reduce the same RatNum many times when using this method multiple times.
+An advantage of this is that you are making it clear that the RatNum you are returning in a
+string will be reduced(this helps code clarity).
+
+
+2. Alternate add, sub, mul, div
+One problem is that having the ability to change value of our RatNum variables goes against the specfication
+where it says the class is immutable; The clients would be able to directly modify the numerator and denominator,
+which means we can't hold the representation invariant. Also, if the RatNum we add,subtract,multiply,or divide to
+our RatNum is changed, this change would be reflected on our RatNum(this is unintentional).
+
+
+3. Constructor checkReps
+
+It is sufficient to call checkRep() only at the end of the constructors because
+once a RatNum is created, it's fields become completely immutable(they cannot be changed).
+No methods can change this, which means we don't have to include a checkRep() inside each method.
+We only need to do a checkRep() once at the end of the constructor because if it
+passes the representation invariant, we then know that the current RatNum will always
+satisfy the rep inv for any method.
+
+
+## Part 2
+###########################################################################
+
+1. Calls to checkRep in RatTerm
+
+I included my checkRep() at the end of the constructor because
+I can only test to see if the representation invariant is held after the instance
+variables are initialized. The reasons I only perform a checkRep() at the
+beginning of my methods is that all of them return new RatTerms,
+my coefficient is immutable, and my exponent is immutable.
+The checkRep() is only to ensure that when I enter the method, my representation invariant is
+held since I know that if that's the case then it will be held throughout the method.
+
+
+2. Weakened Rep Invariant
+
+For the constructor RatTerm(RatNum c, int e), it should take out the test where if the coefficient is
+0, then the exponent is 0. An advantage to this is there is less code to run/test, which increases
+efficiency. Disadvantages are how it affects the operations on the other methods, and in terms of
+code-clarity it doesn't make sense for a term with a zero coefficient having any exponent other than 0.
+
+For checkRep(), it doesn't have to include code to make sure that RatTerms with a zero coefficient
+will have an exponent that is 0. An advantage to this is that there is less testing,
+which increases code efficiency. A disadvantage is that it can lead to decreased code
+efficiency(for example, adding 0x^6 + 0x^7 leads to a more complicated code for how to solve this).
+
+For the add method, we should take care of the case when adding two RatTerms that have a
+zero coefficient, and decide on what their exponent should be(this is now ambiguous). For example,
+doing 0x^6 + 0x^7 results in a zero coefficient, but the exponent could be anything.
+A disadvantage to this is how we need more code to take care of this case, and the
+ambiguity of what the exponent should be affects code clarity. An advantage is that this
+allows the add method to work for a larger range of values.
+
+For the subtract method, we again have to take care of the case when subtracting two
+RatTerms that have a zero coefficient, and decide on what their exponent should be(this is ambiguous).
+A disadvantage is how we have decreased code clarity due to this ambiguity, and we now how to add
+in more code to take care of this. An advantage is that this allows the subtract method to work
+for a larger range of values.
+
+For the toString method, it must be changed to handle a RatTerm with a zero coefficient and a non-zero
+exponent. Currently, it would return something like "0*x^2" instead of just "0". A disadvantage to this
+is that it leads to more tests in toString(), which decrease its efficiency. An advantage could
+be how it makes it more clear what should be outputted if the coefficient is zero regardless of the exponent.
+
+For the hashCode method, it now has to deal with a RatTerm that has a zero coefficient
+and a non-zero exponent. Currently, "0*x" and "0" get different hashcodes, even though they are the same value.
+A disadvantage to this is how it adds more code to the hashCode method, which decreases its efficiency. An
+advantage of this is we could add a standard value for RatTerm's with a zero coefficient, which increases
+code clarity.
+
+The equals method should change to deal with comparing two RatTerms who both have a zero coefficient, but
+different exponents. It should probably just test if both RatTerm's coefficient is equal to RatNum.Zero.
+A disadvantage is that this adds more tests and code, which decreases efficiency. An
+advantage is how it helps code clarity since it makes it clear that "0*x" and "0" are the same even with
+different exponents.
+
+3. Alternate Rep Invariant
+
+You would have to update the checkRep() method to ensure that if a new RatTerm is created and
+if the coefficient is NaN, then it's exponent must always be 0. A disadvantage to this is that
+it leads to more code to execute. An advantage to this is that because RatTerms with NaN never have their
+exponent's dealt with, so it would make sense to standardize their exponents to all be 0(this helps code clarity).
+
+You will have to update the constructor so that if it receives a RatNum that is NaN, then
+the exponent will be assigned the value 0. A disadvantage would be the additional
+test needed to see if the coefficient is NaN. An advantage would be that it makes a
+RatTerm more clear(i.e. NaN*x^7 is less comprehensible than NaN*x^0 = NaN).
+
+4. Preferred Invariants
+
+
+
+
+## Part 3
+###########################################################################
+
+1. Calls to checkRep in RatPoly
+
+For all my methods, I include a checkRep() at the start to ensure that any value I'm about to
+return or any operation that I'm about to perform adheres to the representation invariant. If my
+method involves more than just simply returning, I include a checkRep() at the end of
+the method to ensure that the terms in RatPoly still adhere to the representation invariant. I include a
+checkRep() at the end of the constructor because I can only test if the instance variables adhere
+to the representation invariant when it's initialized.
+
+2. Alternate Representation
+
+A disadvantage of this is how you will have to iterate over two lists to get the same
+result as with our current RatPoly, which decreases efficiency. An advantage to this
+is that you can more easily retrieve the coefficient or exponent of a RatTerm
+as compared to current RatPoly. I believe our current representation is better
+for efficiency reasons, and also the code can become hard to read if we are using two
+different lists at the same time.
+

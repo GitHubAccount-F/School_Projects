@@ -1,0 +1,10 @@
+#Starts from one Marvel Character, and goes directly to
+#the wanted Marvel character(no alternative paths to explore, just the
+#path that leads to that character).
+
+#Creates the graph
+LoadGraph graph1 directPathInSameComic.csv
+
+#Finds the path between characters
+FindPath graph1 SpiderMan MilesMorales
+FindPath graph1 Venom Carnage

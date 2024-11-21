@@ -1,0 +1,26 @@
+#Tests if edges properly form in marvel social network
+
+#Creates graphs
+loaded graph graph1
+loaded graph graph2
+loaded graph graph3
+loaded graph graph4
+
+#Checks if edges were created
+#Should produce no edges
+the children of SpiderMan in graph1 are:
+the children of Wolverine in graph1 are:
+the children of Hulk in graph1 are:
+
+#Should have an edge both ways
+the children of SpiderMan in graph2 are: Venom(Spider-Verse)
+the children of Venom in graph2 are: SpiderMan(Spider-Verse)
+
+#Should produce a single edge
+the children of Hulk in graph2 are: Thor(Ragnarok)
+the children of IronMan in graph4 are: Thor(Ragnarok) Venom(Stark-Tower-Falling)
+the children of Thor in graph4 are: CaptainAmerica(Civil-War) IronMan(Ragnarok)
+
+#Should have many edges
+the children of SpiderMan in graph3 are: Carnage(Spider-Verse) MilesMorales(Spider-Verse) Venom(Spider-Verse)
+the children of Carnage in graph3 are: MilesMorales(Spider-Verse) SpiderMan(Spider-Verse) Venom(Spider-Verse)

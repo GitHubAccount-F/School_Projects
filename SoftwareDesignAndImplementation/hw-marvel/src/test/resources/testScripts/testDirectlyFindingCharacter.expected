@@ -1,0 +1,12 @@
+#Starts from one Marvel Character, and goes directly to
+#the wanted Marvel character(no alternative paths to explore, just the
+#path that leads to that character).
+
+#Creates the graph
+loaded graph graph1
+
+#Finds the path between characters
+path from SpiderMan to MilesMorales:
+SpiderMan to MilesMorales via Spider-Verse
+path from Venom to Carnage:
+Venom to Carnage via Spider-Verse

@@ -1,0 +1,28 @@
+#Tests when there is not a path found
+
+#Creates graphs
+CreateGraph graph1
+CreateGraph graph2
+CreateGraph graph3
+CreateGraph graph4
+
+#Adds nodes
+AddNode graph1 SpiderMan
+AddNode graph2 SpiderMan
+AddNode graph2 Venom
+AddNode graph3 SpiderMan
+AddNode graph3 Carnage
+AddNode graph3 Venom
+
+#Adds edges
+AddEdge graph3 SpiderMan Venom SpiderVerse
+AddEdge graph3 Venom SpiderMan SpiderVerse
+
+#Finds paths
+FindPath graph4 IronMan Hulk
+
+FindPath graph1 SpiderMan Hulk
+
+FindPath graph2 SpiderMan Venom
+
+FindPath graph3 SpiderMan Carnage

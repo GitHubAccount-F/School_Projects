@@ -1,0 +1,9 @@
+#Tests my algorithms with the example csv given
+
+#Creates graph
+LoadGraph graph1 staffSuperheroes.csv
+
+#Finds paths
+FindPath graph1 Ernst-the-Bicycling-Wizard Grossman-the-Youngest-of-them-all
+
+FindPath graph1 Perkins-the-Magical-Singing-Instructor Ernst-the-Bicycling-Wizard

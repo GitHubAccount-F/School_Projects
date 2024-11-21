@@ -1,0 +1,13 @@
+#Tests when the path involves searching through multiple comics,
+#but is a linear search(characters connecting to other characters
+#until we directly end up at the target)
+
+#Creates graph
+LoadGraph graph1 directPathNotInSameComics.csv
+
+#Finds path between characters
+FindPath graph1 SpiderMan CaptainAmerica
+
+FindPath graph1 Venom Thor
+
+FindPath graph1 IronMan IronMan

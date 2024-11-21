@@ -1,0 +1,24 @@
+#Tests to see if multiple edges can be added between two nodes
+
+#Creates empty graphs
+created graph graph1
+created graph graph2
+created graph graph3
+
+#Adds nodes to graphs
+added node one to graph1
+added node two to graph1
+added node one to graph2
+added node two to graph2
+added node one to graph3
+added node two to graph3
+
+#Adds the edge
+added edge e1 from one to two in graph2
+added edge e1 from one to two in graph3
+added edge e2 from one to two in graph3
+
+#Check to see if edge was added
+the children of one in graph1 are:
+the children of one in graph2 are: two(e1)
+the children of one in graph3 are: two(e1) two(e2)

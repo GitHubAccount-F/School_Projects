@@ -1,0 +1,16 @@
+#Tests Dijkstra's algorithm with a graph containing only two
+#nodes, but with no edges between them
+
+#Creates the graph
+created graph graph1
+
+#Adds the nodes
+added node one to graph1
+added node two to graph1
+
+#Finds a path
+path from one to two:
+no path found
+
+path from two to one:
+no path found

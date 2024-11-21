@@ -1,0 +1,33 @@
+#Tests that ListChildren works with nodes of type double
+
+#Creates graphs
+created graph graph1
+created graph graph2
+created graph graph3
+
+#Adds nodes
+added node one to graph1
+added node two to graph1
+
+added node one to graph2
+added node two to graph2
+
+added node one to graph3
+added node two to graph3
+added node three to graph3
+
+#Adds edges
+added edge 5.000 from one to two in graph1
+
+added edge 5.000 from one to two in graph2
+added edge 4.000 from one to two in graph2
+
+added edge 5.000 from one to two in graph3
+added edge 7.351 from one to two in graph3
+added edge 44.901 from one to two in graph3
+added edge 70.000 from one to three in graph3
+
+#List the child nodes
+the children of one in graph1 are: two(5.000)
+the children of one in graph2 are: two(4.000) two(5.000)
+the children of one in graph3 are: three(70.000) two(5.000) two(7.351) two(44.901)

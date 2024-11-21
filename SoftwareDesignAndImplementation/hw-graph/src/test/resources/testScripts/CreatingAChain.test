@@ -1,0 +1,24 @@
+#Tests to see if we can create a chain of nodes.
+#For example, A-->B-->C-->A
+
+#Creates an empty graph
+CreateGraph graph1
+
+#Adds nodes
+AddNode graph1 one
+AddNode graph1 two
+AddNode graph1 three
+
+#Creates edges
+AddEdge graph1 one two e1
+AddEdge graph1 two three e2
+AddEdge graph1 three one e1
+
+#Lists the nodes
+ListNodes graph1
+
+#Lists the child nodes, where we should
+#be able to tell that their is a chain present
+ListChildren graph1 one
+ListChildren graph1 two
+ListChildren graph1 three
