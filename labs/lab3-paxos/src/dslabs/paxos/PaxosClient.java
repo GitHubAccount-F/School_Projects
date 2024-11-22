@@ -88,9 +88,10 @@ public final class PaxosClient extends Node implements Client {
      */
     //System.out.println("CLIENT handlePaxosReply  " + m + " and seq = " + sequenceNum);
     if (this.sequenceNum == m.result().sequenceNum()) {
+      System.out.println("CLIENT handlePaxosReply  " + m + " and seq = " + sequenceNum);
       result = m.result().result();
-      notify();
       this.sequenceNum++;
+      notify();
     }
   }
 

@@ -19,7 +19,7 @@ final class HeartbeatCheckTimer implements Timer {
 
 @Data
 final class HeartbeatSenderTimer implements Timer {
-  static final int HEARTBEATSENDER_RETRY_MILLIS = 75;
+  static final int HEARTBEATSENDER_RETRY_MILLIS = 50;
 }
 @Data
 final class P1aTimer implements Timer {
