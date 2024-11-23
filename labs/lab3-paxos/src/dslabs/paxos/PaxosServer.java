@@ -599,10 +599,7 @@ public class PaxosServer extends Node {
       for (Integer integer : slotsToRemove) {
         this.log.remove(integer);
       }
-      // //System.out.println("AFTER Server = " + this.address());
-      // //System.out.println(" Server = " + this.address() + " logs = " + this.log);
-      // //System.out.println(" Server = " + this.address() + " slot_in = " +
-      // this.slot_in + " slot_out = " + this.slot_out + " ballot = " + this.ballot);
+
       HeartBeatResponse message = new HeartBeatResponse(latest_Executed_command);
       send(message, sender);
     }
@@ -879,7 +876,7 @@ public class PaxosServer extends Node {
   // used to update slot_out whenever a command gets chosen, also execute commands
   // as we are updating
   public static int updateSlotOut(int slot_out, int slot_in, Map<Integer, LogEntry> log, AMOApplication app) {
-    boolean stopExecute = false;
+   // boolean stopExecute = false;
     for (int i = slot_out; i < slot_in; i++) {
       // missing space in log, stop here
       if (!log.containsKey(i)) {
@@ -891,12 +888,14 @@ public class PaxosServer extends Node {
           app.execute(log.get(i).command);
           continue;
         }
+        app.execute(log.get(i).command);
+        /*
         if (log.get(i - 1) == null) {
           stopExecute = true;
         }
         if (!stopExecute) {
           app.execute(log.get(i).command);
-        }
+        }*/
 
       }
       if (log.containsKey(i) && log.get(i).status == PaxosLogSlotStatus.ACCEPTED) {
