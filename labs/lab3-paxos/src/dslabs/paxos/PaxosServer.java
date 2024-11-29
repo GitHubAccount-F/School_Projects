@@ -89,6 +89,8 @@ public class PaxosServer extends Node {
     // set heartbeatCheckTimer
     latest_Executed_command = 0;
     majority = (servers.length / 2) + 1;
+    // as an optimization, all servers at the start should know the leader
+    //ballot = new Ballot(0, servers[0]);
     if (this.address().equals(servers[0])) {
       // we hardcode the first server to be the leader
       active = true;
@@ -150,28 +152,11 @@ public class PaxosServer extends Node {
    * @see PaxosLogSlotStatus
    */
   public PaxosLogSlotStatus status(int logSlotNum) {
-    ////System.out.println(logSlotNum);
-    ////System.out.println(this.log);
-    ////System.out.println(this.slot_in);
-    ////System.out.println(this.slot_out);
-    ////////// //System.out.println("Server = " + this.address() + " \nstatus = " +
-    ////////// logSlotNum);
-    // Your code here...
-    /*
-    if (garbage_slot < logSlotNum && !this.log.containsKey(logSlotNum)) {
-      return PaxosLogSlotStatus.EMPTY;
-    } */
     if (!this.log.containsKey(logSlotNum)) {
       if (garbage_slot >= logSlotNum) {
         return PaxosLogSlotStatus.CLEARED;
       } else return PaxosLogSlotStatus.EMPTY;
     }
-    /*
-    if (garbage_slot - 1 >= logSlotNum && !this.log.containsKey(logSlotNum)) {
-      return PaxosLogSlotStatus.CLEARED;
-    } */
-    ////////// //System.out.println("Server = " + this.address() + " \n slot = " +
-    ////////// logSlotNum + " \n status = " + log.get(logSlotNum).status());
     return log.get(logSlotNum).status();
   }
 
@@ -205,13 +190,6 @@ public class PaxosServer extends Node {
     if (status(logSlotNum) == PaxosLogSlotStatus.CLEARED || status(logSlotNum) == PaxosLogSlotStatus.EMPTY) {
       return null;
     }
-    /*if (garbage_slot - 1 >= logSlotNum || !log.containsKey(logSlotNum) ||
-        status(logSlotNum) == PaxosLogSlotStatus.CLEARED ||
-        status(logSlotNum) == PaxosLogSlotStatus.EMPTY) {
-      return null;
-    }*/
-    // ////////System.out.println("Server = " + this.address() + " \n slot = " +
-    // logSlotNum + " \n command = " + log.get(logSlotNum));
     LogEntry entry = log.get(logSlotNum);
     if (entry.command() instanceof AMOCommand) {
       return ((AMOCommand) entry.command()).command();
@@ -284,7 +262,6 @@ public class PaxosServer extends Node {
     //System.out.println("Server = " + this.address() + " \n handlePaxosRequest = " + m);
     //System.out.println("Server = " + this.address() + " is leader = " + active);
     if (this.app != null) {
-      // ////////System.out.println("here1");
       // we must be the leader to accept
       // if not already executed, send to all servers
       if (active && !app.alreadyExecuted(m.command())) {
@@ -294,48 +271,35 @@ public class PaxosServer extends Node {
 
 
         // makes sure we don't create another proposal with the same command
-        boolean commandNotPresentInProposals = false;
+        boolean commandPresentInProposals = false;
 
         for (Pvalue check : proposals.keySet()) {
-          if (check.command != null && check.command.equals(m.command()) && check.command.sequenceNum() == m.command().sequenceNum()) {
-            commandNotPresentInProposals = true;
+          if (check.command != null && check.command.equals(m.command()) && check.command.sequenceNum() == m.command().sequenceNum() && check.command.clientAddress().equals(m.command().clientAddress())) {
+            commandPresentInProposals = true;
           }
         }
         for (LogEntry entry : log.values()) {
-          if (entry.command != null && entry.command.equals(m.command()) && entry.command.sequenceNum() == m.command().sequenceNum()) {
-            commandNotPresentInProposals = true;
+          if (entry.command != null && entry.command.equals(m.command()) && entry.command.sequenceNum() == m.command().sequenceNum() && entry.command.clientAddress().equals(m.command().clientAddress())) {
+            commandPresentInProposals = true;
           }
         }
-        //if (!this.proposals.containsKey(pvalue) && !commandNotPresentInProposals) {
 
-        if (!this.proposals.containsKey(pvalue) && !commandNotPresentInProposals) {
+        if (!this.proposals.containsKey(pvalue) && !commandPresentInProposals) {
           slot_in++;
           proposals.put(pvalue, new ArrayList<>());
           P2a message = new P2a(pvalue);
-          for (int i = 0; i < servers.length; i++) {
-            send(message, servers[i]);
+          for (Address server : servers) {
+            send(message, server);
           }
           // set timer for this p2a message
           set(new P2aTimer(message), P2aTimer_RETRY_MILLIS);
         }
 
-      } else if (active && app.alreadyExecuted(m.command())) {
+      } else if (app.alreadyExecuted(m.command())) {
         // if we already executed, just send something back to client
         send(new PaxosReply(app.execute(m.command())), sender);
       }
     }
-
-    /*
-     * accept only if you are the leader and that application has not executed it
-     * find available slot in replica, increment slot_in
-     * send out proposals to acceptors(proposals are pvalues, I already defined them
-     * in messages)
-     * wrap proposal with a P2a message, and send to all servers(including leader)
-     * set p2a timer
-     * if app executed command,
-     * send back execute(command) from app
-     */
-
   }
 
   // SHOULD BE CORRECT
@@ -380,8 +344,6 @@ public class PaxosServer extends Node {
   private void handleP2a(P2a m, Address sender) {
     // Your code here...
     /*
-     * // ***** case idk about: what if we get a p2a message from another leader
-     * // i assume we become a follower
      *
      * if acceptor and has not already accepted this P2a:
      * only accept if the ballot number in the P2a is >= to current ballot and slot
@@ -395,6 +357,7 @@ public class PaxosServer extends Node {
     //System.out.println("Server = " + this.address() + " ballot = " + this.ballot
      //+ " \n handleP2a = " + m);
     if (this.ballot.compareTo(m.pvalue().ballot()) <= 0) {
+
       if (this.ballot.compareTo(m.pvalue().ballot()) < 0) {
         receivedHeartbeat = true;
       }
@@ -421,22 +384,10 @@ public class PaxosServer extends Node {
       } else if (!log.containsKey(m.pvalue().slot())) { // if the slot is new, it must go to slot_in
         // below: for the leader, we already incremented slot_in when sending the p2a,
         // but we didn't do this for other acceptors
-        /*
-         * if ((active && m.pvalue().slot + 1 == slot_in) || (!active &&
-         * m.pvalue().slot() == slot_in)) {
-         * if (m.pvalue().slot() == slot_in) {
-         * slot_in++;
-         * }
-         * LogEntry entry = new LogEntry(m.pvalue().ballot(),
-         * PaxosLogSlotStatus.ACCEPTED, m.pvalue().command());
-         * log.put(m.pvalue().slot(), entry);
-         * P2b message = new P2b(m.pvalue().ballot(), m.pvalue());
-         * send(message, sender);
-         * }
-         */
         LogEntry entry = new LogEntry(m.pvalue().ballot(), PaxosLogSlotStatus.ACCEPTED, m.pvalue().command());
         log.put(m.pvalue().slot(), entry);
         slot_in = updateSlotIn(this.slot_in, this.log, this.proposals);
+        slot_out = updateSlotOut(this.slot_out, this.slot_in, this.log, this.app);
         P2b message = new P2b(m.pvalue().ballot(), m.pvalue());
         send(message, sender);
       }
@@ -875,7 +826,7 @@ public class PaxosServer extends Node {
 
   // used to update slot_out whenever a command gets chosen, also execute commands
   // as we are updating
-  public static int updateSlotOut(int slot_out, int slot_in, Map<Integer, LogEntry> log, AMOApplication app) {
+  public int updateSlotOut(int slot_out, int slot_in, Map<Integer, LogEntry> log, AMOApplication app) {
    // boolean stopExecute = false;
     for (int i = slot_out; i < slot_in; i++) {
       // missing space in log, stop here
@@ -884,11 +835,9 @@ public class PaxosServer extends Node {
       }
       if (log.containsKey(i) && log.get(i).status == PaxosLogSlotStatus.CHOSEN && log.get(i).command != null) {
         // we want to make sure all commands before this one was executed
-        if (i == 1) {
-          app.execute(log.get(i).command);
-          continue;
-        }
+
         app.execute(log.get(i).command);
+        send(new PaxosReply(app.execute(log.get(i).command)), log.get(i).command.clientAddress());
         /*
         if (log.get(i - 1) == null) {
           stopExecute = true;
@@ -905,7 +854,7 @@ public class PaxosServer extends Node {
     return slot_in;
   }
 
-  public static int updateSlotIn(int slot_in, Map<Integer, LogEntry> log, Map<Pvalue, List<Address>> proposals) {
+  public int updateSlotIn(int slot_in, Map<Integer, LogEntry> log, Map<Pvalue, List<Address>> proposals) {
     int result = slot_in;
     if (proposals != null) {
       for (Pvalue entry : proposals.keySet()) {

@@ -6,7 +6,7 @@ import lombok.Data;
 
 @Data
 final class ClientTimer implements Timer {
-  static final int CLIENT_RETRY_MILLIS = 50;
+  static final int CLIENT_RETRY_MILLIS = 150;
   private final int sequenceNumber;
   // Your code here...
 }
@@ -14,7 +14,7 @@ final class ClientTimer implements Timer {
 // Your code here...
 @Data
 final class HeartbeatCheckTimer implements Timer {
-  static final int HEARTBEATCHECK_RETRY_MILLIS = 100;
+  static final int HEARTBEATCHECK_RETRY_MILLIS = 102;
 }
 
 @Data
@@ -23,11 +23,11 @@ final class HeartbeatSenderTimer implements Timer {
 }
 @Data
 final class P1aTimer implements Timer {
-  static final int P1aTimer_RETRY_MILLIS = 75;
+  static final int P1aTimer_RETRY_MILLIS = 50;
   private final P1a p1a;
 }
 @Data
 final class P2aTimer implements Timer {
-  static final int P2aTimer_RETRY_MILLIS = 75;
+  static final int P2aTimer_RETRY_MILLIS = 50;
   private final P2a message;
 }
