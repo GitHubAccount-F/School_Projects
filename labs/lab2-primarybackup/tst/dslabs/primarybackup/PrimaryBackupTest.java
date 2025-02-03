@@ -561,6 +561,8 @@ public class PrimaryBackupTest extends BaseJUnitTest {
     runSettings.clearInvariants().addInvariant(ALL_RESULTS_SAME);
 
     runState.run(runSettings);
+
+
   }
 
   @Test(timeout = 30 * 1000)

@@ -15,9 +15,21 @@ final class PingTimer implements Timer {
 
 @Data
 final class ClientTimer implements Timer {
-  static final int CLIENT_RETRY_MILLIS = 100;
+  static final int CLIENT_RETRY_MILLIS = 25;
 
   // Your code here...
+  private final int sequenceNum;
 }
 
 // Your code here...
+
+@Data
+final class StateTransferTimer implements Timer {
+  static final int STATE_TRANSFER_RETRY_MILLIS = 50;
+  //private final int viewNum;
+}
+
+@Data
+final class GetViewTimer implements Timer {
+  static final int PING_MILLIS = 25;
+}
